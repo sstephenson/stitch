@@ -1,1 +1,2 @@
-var baz = "biz";
+exports.baz = require("foo/baz").baz;
+

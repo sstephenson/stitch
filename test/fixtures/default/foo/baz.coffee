@@ -1,1 +1,1 @@
-baz = "biz"
+exports.baz = "biz"

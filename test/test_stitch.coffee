@@ -100,8 +100,8 @@ exports.testGetRelativePath = (test) ->
 exports.testStripExtension = (test) ->
   test.expect 1
 
-  filename = stitch.stripExtension "foo.coffee"
-  test.same "foo", filename
+  filename = stitch.stripExtension "module.coffee"
+  test.same "module", filename
 
   test.done()
 
@@ -110,21 +110,21 @@ exports.testGatherSources = (test) ->
 
   stitch.gatherSources defaultOptions, (err, sources) ->
     test.ok !err
-    test.same "foo.coffee", sources.foo.filename
-    test.ok sources.foo.source
+    test.same "module.coffee", sources["module"].filename
+    test.ok sources["module"].source
     test.done()
 
 exports.testGatherSourcesCanIncludeIndividualFile = (test) ->
   test.expect 4
 
   options = Object.create defaultOptions
-  options.sourcePaths = [fixtures + "/foo.coffee"]
+  options.sourcePaths = [fixtures + "/module.coffee"]
 
   stitch.gatherSources options, (err, sources) ->
     test.ok !err
     test.same 1, Object.keys(sources).length
-    test.same "foo.coffee", sources.foo.filename
-    test.ok sources.foo.source
+    test.same "module.coffee", sources["module"].filename
+    test.ok sources["module"].source
     test.done()
 
 exports.testStitchGeneratesValidJavaScript = (test) ->
@@ -152,4 +152,15 @@ exports.testStitchModuleWithExportedProperty = (test) ->
   stitch.stitch defaultOptions, (err, sources) ->
     eval sources
     test.same "bar", testRequire("exported_property").foo
+    test.done()
+
+exports.testStitchModuleWithRequires = (test) ->
+  test.expect 3
+
+  stitch.stitch defaultOptions, (err, sources) ->
+    eval sources
+    module = testRequire("module")
+    test.same "bar", module.foo
+    test.same "foo", module.bar()
+    test.same "biz", module.baz
     test.done()
