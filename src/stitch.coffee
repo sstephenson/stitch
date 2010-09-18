@@ -3,10 +3,16 @@ sys = require 'sys'
 {extname, join, normalize} = require 'path'
 
 defaultCompilers =
-  js: (source) -> source
+  js: (source, callback) ->
+    callback false, source
 
 try
-  defaultCompilers.coffee = require('coffee-script').compile
+  CoffeeScript = require 'coffee-script'
+  defaultCompilers.coffee = (source, callback) ->
+    try
+      callback false, CoffeeScript.compile source
+    catch err
+      callback err
 catch err
 
 extend = (destination, source) ->
@@ -80,10 +86,7 @@ exports.compileFile = compileFile = (path, options, callback) ->
     else
       source = contents.toString()
       if compile = compilers[extension]
-        try
-          callback false, compile source
-        catch err
-          callback err
+        compile source, callback
       else
         callback "no compiler for '.#{extension}' files"
 
