@@ -1,0 +1,211 @@
+fs = require 'fs'
+sys = require 'sys'
+{extname, join, normalize} = require 'path'
+
+defaultCompilers =
+  js: (source) -> source
+
+try
+  defaultCompilers.coffee = require('coffee-script').compile
+catch err
+
+extend = (destination, source) ->
+  for key, value of source
+    destination[key] = value
+  destination
+
+merge = (objects...) ->
+  result = {}
+  for object in objects
+    extend result, object if object
+  result
+
+forEachAsync = (elements, callback) ->
+  remainingCount = elements.length
+
+  next = () ->
+    remainingCount--
+    if remainingCount <= 0
+      callback false, null
+
+  for element in elements
+    callback next, element
+
+exports.walkTree = walkTree = (directory, callback) ->
+  fs.readdir directory, (err, files) ->
+    if err then return callback err
+
+    forEachAsync files, (next, file) ->
+      if next
+        filename = join directory, file
+        fs.stat filename, (err, stats) ->
+          if stats.isDirectory()
+            walkTree filename, (err, filename) ->
+              if filename
+                callback err, filename
+              else
+                next()
+          else
+            callback err, filename
+            next()
+      else
+        callback err, null
+
+exports.getFilesInTree = getFilesInTree = (directory, callback) ->
+  files = []
+  walkTree directory, (err, filename) ->
+    if err
+      callback err
+    else if filename
+      files.push filename
+    else
+      callback err, files
+
+getCompilersFrom = (options) ->
+  merge defaultCompilers, options.compilers
+
+compilerIsAvailableFor = (filename, options) ->
+  for name in Object.keys getCompilersFrom options
+    extension = extname(filename).slice(1)
+    return true if name is extension
+  false
+
+exports.compileFile = compileFile = (path, options, callback) ->
+  compilers = getCompilersFrom options
+  extension = extname(path).slice(1)
+
+  fs.readFile path, (err, contents) ->
+    if err
+      callback err
+    else
+      source = contents.toString()
+      if compile = compilers[extension]
+        try
+          callback false, compile source
+        catch err
+          callback err
+      else
+        callback "no compiler for '.#{extension}' files"
+
+exports.expandPaths = expandPaths = (sourcePaths, callback) ->
+  paths = []
+
+  forEachAsync sourcePaths, (next, sourcePath) ->
+    if next
+      fs.realpath sourcePath, (err, path) ->
+        if err
+          callback err
+        else
+          paths.push normalize path
+        next()
+    else
+      callback null, paths
+
+exports.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
+  path = normalize path
+
+  expandPaths requirePaths, (err, expandedPaths) ->
+    return callback err if err
+
+    fs.realpath path, (err, path) ->
+      return callback err if err
+
+      for expandedPath in expandedPaths
+        base = expandedPath + "/"
+        if path.indexOf(base) is 0
+          return callback false, path.slice base.length
+
+      callback "#{path} isn't in the require path"
+
+exports.stripExtension = stripExtension = (filename) ->
+  extension = extname filename
+  filename.slice 0, -extension.length
+
+gatherSource = (path, options, callback) ->
+  getRelativePath options.requirePaths, path, (err, relativePath) ->
+    if err then callback err
+    else
+      compileFile path, options, (err, source) ->
+        if err then callback err
+        else
+          callback err, stripExtension(relativePath),
+            filename: relativePath
+            source:   source
+
+gatherSourcesFromPath = (sourcePath, options, callback) ->
+  fs.stat sourcePath, (err, stat) ->
+    if err then return callback err
+
+    sources = {}
+
+    if stat.isDirectory()
+      getFilesInTree sourcePath, (err, paths) ->
+        if err then callback err
+        else
+          forEachAsync paths, (next, path) ->
+            if next
+              if compilerIsAvailableFor path, options
+                gatherSource path, options, (err, key, value) ->
+                  if err then callback err
+                  else sources[key] = value
+                  next()
+              else
+                next()
+            else
+              callback null, sources
+    else
+      gatherSource sourcePath, options, (err, key, value) ->
+        if err then callback err
+        else sources[key] = value
+        callback false, sources
+
+exports.gatherSources = gatherSources = (options, callback) ->
+  {sourcePaths} = options
+  sources = {}
+
+  forEachAsync sourcePaths, (next, sourcePath) ->
+    if next
+      gatherSourcesFromPath sourcePath, options, (err, pathSources) ->
+        if err then callback err
+        else
+          for key, value of pathSources
+            sources[key] = value
+        next()
+    else
+      callback null, sources
+
+exports.stitch = (options, callback) ->
+  options.identifier   ?= 'require'
+  options.sourcePaths  ?= ['lib']
+  options.requirePaths ?= ['lib']
+
+  gatherSources options, (err, sources) ->
+    if err
+      callback err
+    else
+      result = """
+        var #{options.identifier} = (function(modules) {
+          return function require(name) {
+            var fn = modules[name], module;
+            if (fn) {
+              module = { id: name, exports: {} };
+              fn(module.exports, require, module);
+              return module.exports;
+            } else {
+              throw 'module \\'' + name + '\\' not found';
+            }
+          }
+        })({
+      """
+
+      index = 0
+      for name, {filename, source} of sources
+        result += if index++ is 0 then "" else ", "
+        result += sys.inspect name
+        result += ": function(exports, require, module) {#{source}}"
+
+      result += """
+        });\n
+      """
+
+      callback false, result
