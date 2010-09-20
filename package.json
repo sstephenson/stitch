@@ -1,0 +1,15 @@
+{ "name": "stitch"
+, "description": "Stitch your CommonJS modules together for the browser"
+, "author": "Sam Stephenson"
+, "version": "0.1.0"
+, "licenses": [
+  { "type": "MIT"
+  , "url": "http://github.com/sstephenson/stitch/raw/master/LICENSE"
+  }]
+, "directories": { "lib": "./lib" }
+, "main": "./lib/stitch"
+, "repository":
+  { "type": "git"
+  , "url": "http://github.com/sstephenson/stitch.git"
+  }
+}
