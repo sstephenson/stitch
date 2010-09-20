@@ -1,6 +1,9 @@
 { "name": "stitch"
 , "description": "Stitch your CommonJS modules together for the browser"
-, "author": "Sam Stephenson"
+, "contributors":
+  [ "Josh Peek"
+  , "Sam Stephenson"
+  ]
 , "version": "0.1.0"
 , "licenses": [
   { "type": "MIT"
