@@ -66,8 +66,10 @@ exports.testCompileFileWithCustomCompiler = (test) ->
 
   options = Object.create alternateOptions
   options.compilers =
-    alert: (source, callback) ->
-      callback false, "alert(#{sys.inspect source});"
+    alert: (module, filename) ->
+      source = require('fs').readFileSync filename, 'utf8'
+      source = "alert(#{sys.inspect source});"
+      module._compile source, filename
 
   stitch.compileFile altFixtures + "/hello.alert", options, (err, source) ->
     test.same "alert('hello world\\n');", source

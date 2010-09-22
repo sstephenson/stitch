@@ -3,16 +3,16 @@ sys = require 'sys'
 {extname, join, normalize} = require 'path'
 
 defaultCompilers =
-  js: (source, callback) ->
-    callback false, source
+  js: (module, filename) ->
+    content = fs.readFileSync filename, 'utf8'
+    module._compile content, filename
 
 try
   CoffeeScript = require 'coffee-script'
-  defaultCompilers.coffee = (source, callback) ->
-    try
-      callback false, CoffeeScript.compile source
-    catch err
-      callback err
+  defaultCompilers.coffee = (module, filename) ->
+    content = CoffeeScript.compile fs.readFileSync filename, 'utf8'
+    module.filename = "#{filename} (compiled)"
+    module._compile content, module.filename
 catch err
 
 extend = (destination, source) ->
@@ -32,7 +32,7 @@ forEachAsync = (elements, callback) ->
   next = () ->
     remainingCount--
     if remainingCount <= 0
-      callback false, null
+      callback null, null
 
   for element in elements
     callback next, element
@@ -80,15 +80,19 @@ exports.compileFile = compileFile = (path, options, callback) ->
   compilers = getCompilersFrom options
   extension = extname(path).slice(1)
 
-  fs.readFile path, (err, contents) ->
-    if err
+  if compile = compilers[extension]
+    source = null
+    mod =
+      _compile: (content, filename) ->
+        source = content
+
+    try
+      compile mod, path
+      callback null, source
+    catch err
       callback err
-    else
-      source = contents.toString()
-      if compile = compilers[extension]
-        compile source, callback
-      else
-        callback "no compiler for '.#{extension}' files"
+  else
+    callback "no compiler for '.#{extension}' files"
 
 exports.expandPaths = expandPaths = (sourcePaths, callback) ->
   paths = []
@@ -116,7 +120,7 @@ exports.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
       for expandedPath in expandedPaths
         base = expandedPath + "/"
         if path.indexOf(base) is 0
-          return callback false, path.slice base.length
+          return callback null, path.slice base.length
 
       callback "#{path} isn't in the require path"
 
@@ -160,7 +164,7 @@ gatherSourcesFromPath = (sourcePath, options, callback) ->
       gatherSource sourcePath, options, (err, key, value) ->
         if err then callback err
         else sources[key] = value
-        callback false, sources
+        callback null, sources
 
 exports.gatherSources = gatherSources = (options, callback) ->
   {sourcePaths} = options
@@ -211,4 +215,4 @@ exports.stitch = (options, callback) ->
         });\n
       """
 
-      callback false, result
+      callback null, result
