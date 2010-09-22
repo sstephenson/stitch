@@ -181,7 +181,7 @@ exports.gatherSources = gatherSources = (options, callback) ->
     else
       callback null, sources
 
-exports.stitch = (options, callback) ->
+exports.compile = (options, callback) ->
   options.identifier   ?= 'require'
   options.sourcePaths  ?= ['lib']
   options.requirePaths ?= ['lib']

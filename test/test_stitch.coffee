@@ -1,5 +1,5 @@
 sys = require "sys"
-stitch = require "stitch"
+stitch= require "stitch"
 
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
@@ -130,37 +130,37 @@ module.exports =
       test.ok sources["module"].source
       test.done()
 
-  "stitch generates valid javascript": (test) ->
+  "compile generates valid javascript": (test) ->
     test.expect 2
 
-    stitch.stitch defaultOptions, (err, sources) ->
+    stitch.compile defaultOptions, (err, sources) ->
       test.ok !err
       eval sources
       test.ok typeof testRequire is "function"
       test.done()
 
-  "stitch module with custom exports": (test) ->
+  "compile module with custom exports": (test) ->
     test.expect 2
 
-    stitch.stitch defaultOptions, (err, sources) ->
+    stitch.compile defaultOptions, (err, sources) ->
       eval sources
       result = testRequire("custom_exports")
       test.ok typeof result is "function"
       test.same "foo", result()
       test.done()
 
-  "stitch module with exported property": (test) ->
+  "compile module with exported property": (test) ->
     test.expect 1
 
-    stitch.stitch defaultOptions, (err, sources) ->
+    stitch.compile defaultOptions, (err, sources) ->
       eval sources
       test.same "bar", testRequire("exported_property").foo
       test.done()
 
-  "stitch module with requires": (test) ->
+  "compile module with requires": (test) ->
     test.expect 3
 
-    stitch.stitch defaultOptions, (err, sources) ->
+    stitch.compile defaultOptions, (err, sources) ->
       eval sources
       module = testRequire("module")
       test.same "bar", module.foo
