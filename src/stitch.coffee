@@ -192,11 +192,16 @@ exports.compile = (options, callback) ->
     else
       result = """
         var #{options.identifier} = (function(modules) {
+          var exportCache = {};
           return function require(name) {
-            var fn = modules[name], module;
-            if (fn) {
+            var module = exportCache[name];
+            var fn;
+            if (module) {
+              return module;
+            } else if (fn = modules[name]) {
               module = { id: name, exports: {} };
               fn(module.exports, require, module);
+              exportCache[name] = module.exports;
               return module.exports;
             } else {
               throw 'module \\'' + name + '\\' not found';

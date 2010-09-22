@@ -167,3 +167,16 @@ module.exports =
       test.same "foo", module.bar()
       test.same "biz", module.baz
       test.done()
+
+  "runtime require only loads files once": (test) ->
+    test.expect 2
+
+    stitch.compile defaultOptions, (err, sources) ->
+      eval sources
+
+      module = testRequire("module")
+      test.ok !module.x
+      module.x = "foo"
+      test.same "foo", testRequire("module").x
+
+      test.done()
