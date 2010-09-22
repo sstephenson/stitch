@@ -45,7 +45,7 @@ exports.walkTree = walkTree = (directory, callback) ->
       if next
         filename = join directory, file
         fs.stat filename, (err, stats) ->
-          if stats.isDirectory()
+          if !err and stats.isDirectory()
             walkTree filename, (err, filename) ->
               if filename
                 callback err, filename
