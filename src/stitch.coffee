@@ -201,7 +201,7 @@ exports.compile = (options, callback) ->
             } else if (fn = modules[name]) {
               module = { id: name, exports: {} };
               fn(module.exports, require, module);
-              exportCache[name] = module.exports;
+              // exportCache[name] = module.exports;
               return module.exports;
             } else {
               throw 'module \\'' + name + '\\' not found';
