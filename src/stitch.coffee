@@ -111,7 +111,7 @@ stitch.getFilesInTree = getFilesInTree = (directory, callback) ->
     else if filename
       files.push filename
     else
-      callback err, files
+      callback err, files.sort()
 
 getCompilersFrom = (options) ->
   merge defaultCompilers, options.compilers
