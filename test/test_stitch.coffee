@@ -133,7 +133,7 @@ module.exports =
   "compile generates valid javascript": (test) ->
     test.expect 2
 
-    stitch.compile defaultOptions, (err, sources) ->
+    stitch defaultOptions, (err, sources) ->
       test.ok !err
       eval sources
       test.ok typeof testRequire is "function"
@@ -142,7 +142,7 @@ module.exports =
   "compile module with custom exports": (test) ->
     test.expect 2
 
-    stitch.compile defaultOptions, (err, sources) ->
+    stitch defaultOptions, (err, sources) ->
       eval sources
       result = testRequire("custom_exports")
       test.ok typeof result is "function"
@@ -152,7 +152,7 @@ module.exports =
   "compile module with exported property": (test) ->
     test.expect 1
 
-    stitch.compile defaultOptions, (err, sources) ->
+    stitch defaultOptions, (err, sources) ->
       eval sources
       test.same "bar", testRequire("exported_property").foo
       test.done()
@@ -160,7 +160,7 @@ module.exports =
   "compile module with requires": (test) ->
     test.expect 3
 
-    stitch.compile defaultOptions, (err, sources) ->
+    stitch defaultOptions, (err, sources) ->
       eval sources
       module = testRequire("module")
       test.same "bar", module.foo
@@ -171,7 +171,7 @@ module.exports =
   "runtime require only loads files once": (test) ->
     test.expect 2
 
-    stitch.compile defaultOptions, (err, sources) ->
+    stitch defaultOptions, (err, sources) ->
       eval sources
 
       module = testRequire("module")

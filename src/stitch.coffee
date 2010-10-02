@@ -36,7 +36,48 @@ forEachAsync = (elements, callback) ->
   for element in elements
     callback next, element
 
-exports.walkTree = walkTree = (directory, callback) ->
+module.exports = stitch = (options, callback) ->
+  options.identifier   ?= 'require'
+  options.sourcePaths  ?= ['lib']
+  options.requirePaths ?= ['lib']
+
+  gatherSources options, (err, sources) ->
+    if err
+      callback err
+    else
+      result = """
+        var #{options.identifier} = (function(modules) {
+          var exportCache = {};
+          return function require(name) {
+            var module = exportCache[name];
+            var fn;
+            if (module) {
+              return module;
+            } else if (fn = modules[name]) {
+              module = { id: name, exports: {} };
+              fn(module.exports, require, module);
+              exportCache[name] = module.exports;
+              return module.exports;
+            } else {
+              throw 'module \\'' + name + '\\' not found';
+            }
+          }
+        })({
+      """
+
+      index = 0
+      for name, {filename, source} of sources
+        result += if index++ is 0 then "" else ", "
+        result += sys.inspect name
+        result += ": function(exports, require, module) {#{source}}"
+
+      result += """
+        });\n
+      """
+
+      callback null, result
+
+stitch.walkTree = walkTree = (directory, callback) ->
   fs.readdir directory, (err, files) ->
     if err then return callback err
 
@@ -58,7 +99,7 @@ exports.walkTree = walkTree = (directory, callback) ->
       else
         callback err, null
 
-exports.getFilesInTree = getFilesInTree = (directory, callback) ->
+stitch.getFilesInTree = getFilesInTree = (directory, callback) ->
   files = []
   walkTree directory, (err, filename) ->
     if err
@@ -77,7 +118,7 @@ compilerIsAvailableFor = (filename, options) ->
     return true if name is extension
   false
 
-exports.compileFile = compileFile = (path, options, callback) ->
+stitch.compileFile = compileFile = (path, options, callback) ->
   compilers = getCompilersFrom options
   extension = extname(path).slice(1)
 
@@ -95,7 +136,7 @@ exports.compileFile = compileFile = (path, options, callback) ->
   else
     callback "no compiler for '.#{extension}' files"
 
-exports.expandPaths = expandPaths = (sourcePaths, callback) ->
+stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
   paths = []
 
   forEachAsync sourcePaths, (next, sourcePath) ->
@@ -109,7 +150,7 @@ exports.expandPaths = expandPaths = (sourcePaths, callback) ->
     else
       callback null, paths
 
-exports.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
+stitch.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
   path = normalize path
 
   expandPaths requirePaths, (err, expandedPaths) ->
@@ -125,7 +166,7 @@ exports.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
 
       callback "#{path} isn't in the require path"
 
-exports.stripExtension = stripExtension = (filename) ->
+stitch.stripExtension = stripExtension = (filename) ->
   extension = extname filename
   filename.slice 0, -extension.length
 
@@ -167,7 +208,7 @@ gatherSourcesFromPath = (sourcePath, options, callback) ->
         else sources[key] = value
         callback null, sources
 
-exports.gatherSources = gatherSources = (options, callback) ->
+stitch.gatherSources = gatherSources = (options, callback) ->
   {sourcePaths} = options
   sources = {}
 
@@ -181,44 +222,3 @@ exports.gatherSources = gatherSources = (options, callback) ->
         next()
     else
       callback null, sources
-
-exports.compile = (options, callback) ->
-  options.identifier   ?= 'require'
-  options.sourcePaths  ?= ['lib']
-  options.requirePaths ?= ['lib']
-
-  gatherSources options, (err, sources) ->
-    if err
-      callback err
-    else
-      result = """
-        var #{options.identifier} = (function(modules) {
-          var exportCache = {};
-          return function require(name) {
-            var module = exportCache[name];
-            var fn;
-            if (module) {
-              return module;
-            } else if (fn = modules[name]) {
-              module = { id: name, exports: {} };
-              fn(module.exports, require, module);
-              exportCache[name] = module.exports;
-              return module.exports;
-            } else {
-              throw 'module \\'' + name + '\\' not found';
-            }
-          }
-        })({
-      """
-
-      index = 0
-      for name, {filename, source} of sources
-        result += if index++ is 0 then "" else ", "
-        result += sys.inspect name
-        result += ": function(exports, require, module) {#{source}}"
-
-      result += """
-        });\n
-      """
-
-      callback null, result
