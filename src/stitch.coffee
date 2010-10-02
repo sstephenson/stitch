@@ -77,6 +77,8 @@ module.exports = stitch = (options, callback) ->
 
       callback null, result
 
+mtimeCache = {}
+
 stitch.walkTree = walkTree = (directory, callback) ->
   fs.readdir directory, (err, files) ->
     if err then return callback err
@@ -87,6 +89,8 @@ stitch.walkTree = walkTree = (directory, callback) ->
         filename = join directory, file
 
         fs.stat filename, (err, stats) ->
+          mtimeCache[filename] = stats?.mtime?.toString()
+
           if !err and stats.isDirectory()
             walkTree filename, (err, filename) ->
               if filename
@@ -120,41 +124,36 @@ compilerIsAvailableFor = (filename, options) ->
 
 compileCache = {}
 
-getCompiledSourceFromCache = (path, stat) ->
+getCompiledSourceFromCache = (path) ->
   if cache = compileCache[path]
-    if stat.mtime.toString() is cache.mtime.toString()
+    if mtimeCache[path] is cache.mtime
       cache.source
 
-putCompiledSourceToCache = (path, stat, source) ->
-  compileCache[path] =
-    mtime:  stat.mtime
-    source: source
+putCompiledSourceToCache = (path, source) ->
+  if mtime = mtimeCache[path]
+    compileCache[path] = {mtime, source}
 
 stitch.compileFile = compileFile = (path, options, callback) ->
-  fs.stat path, (err, stat) ->
-    if err
-      callback err
-    else
-      if options.cache and source = getCompiledSourceFromCache path, stat
+  if options.cache and source = getCompiledSourceFromCache path
+    callback null, source
+  else
+    compilers = getCompilersFrom options
+    extension = extname(path).slice(1)
+
+    if compile = compilers[extension]
+      source = null
+      mod =
+        _compile: (content, filename) ->
+          source = content
+
+      try
+        compile mod, path
+        putCompiledSourceToCache path, source if options.cache
         callback null, source
-      else
-        compilers = getCompilersFrom options
-        extension = extname(path).slice(1)
-
-        if compile = compilers[extension]
-          source = null
-          mod =
-            _compile: (content, filename) ->
-              source = content
-
-          try
-            compile mod, path
-            putCompiledSourceToCache path, stat, source if options.cache
-            callback null, source
-          catch err
-            callback err
-        else
-          callback "no compiler for '.#{extension}' files"
+      catch err
+        callback err
+    else
+      callback "no compiler for '.#{extension}' files"
 
 stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
   paths = []
