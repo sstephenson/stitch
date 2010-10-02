@@ -151,6 +151,10 @@ stitch.compileFile = compileFile = (path, options, callback) ->
         putCompiledSourceToCache path, source if options.cache
         callback null, source
       catch err
+        if err instanceof Error
+          err.message = "can't compile #{path}\n#{err.message}"
+        else
+          err = new Error "can't compile #{path}\n#{err}"
         callback err
     else
       callback "no compiler for '.#{extension}' files"
