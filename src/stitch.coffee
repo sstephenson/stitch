@@ -11,8 +11,7 @@ try
   CoffeeScript = require 'coffee-script'
   defaultCompilers.coffee = (module, filename) ->
     content = CoffeeScript.compile fs.readFileSync filename, 'utf8'
-    module.filename = "#{filename} (compiled)"
-    module._compile content, module.filename
+    module._compile content, filename
 catch err
 
 extend = (destination, source) ->
