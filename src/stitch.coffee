@@ -118,23 +118,43 @@ compilerIsAvailableFor = (filename, options) ->
     return true if name is extension
   false
 
+compileCache = {}
+
+getCompiledSourceFromCache = (path, stat) ->
+  if cache = compileCache[path]
+    if stat.mtime.toString() is cache.mtime.toString()
+      cache.source
+
+putCompiledSourceToCache = (path, stat, source) ->
+  compileCache[path] =
+    mtime:  stat.mtime
+    source: source
+
 stitch.compileFile = compileFile = (path, options, callback) ->
-  compilers = getCompilersFrom options
-  extension = extname(path).slice(1)
-
-  if compile = compilers[extension]
-    source = null
-    mod =
-      _compile: (content, filename) ->
-        source = content
-
-    try
-      compile mod, path
-      callback null, source
-    catch err
+  fs.stat path, (err, stat) ->
+    if err
       callback err
-  else
-    callback "no compiler for '.#{extension}' files"
+    else
+      if options.cache and source = getCompiledSourceFromCache path, stat
+        callback null, source
+      else
+        compilers = getCompilersFrom options
+        extension = extname(path).slice(1)
+
+        if compile = compilers[extension]
+          source = null
+          mod =
+            _compile: (content, filename) ->
+              source = content
+
+          try
+            compile mod, path
+            putCompiledSourceToCache path, stat, source if options.cache
+            callback null, source
+          catch err
+            callback err
+        else
+          callback "no compiler for '.#{extension}' files"
 
 stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
   paths = []
