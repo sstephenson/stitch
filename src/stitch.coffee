@@ -43,7 +43,9 @@ exports.walkTree = walkTree = (directory, callback) ->
 
     forEachAsync files, (next, file) ->
       if next
+        return next() if file.match /^\./
         filename = join directory, file
+
         fs.stat filename, (err, stats) ->
           if !err and stats.isDirectory()
             walkTree filename, (err, filename) ->
