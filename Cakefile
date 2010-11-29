@@ -9,6 +9,6 @@ task 'build', 'Build lib/ from src/', ->
 
 task 'test', 'Run tests', ->
   invoke 'build'
-  {testrunner} = require 'nodeunit'
   process.chdir __dirname
-  testrunner.run ['test']
+  {reporters} = require 'nodeunit'
+  reporters.default.run ['test']
