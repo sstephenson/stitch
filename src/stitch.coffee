@@ -26,20 +26,28 @@ merge = (objects...) ->
   result
 
 forEachAsync = (elements, callback) ->
-  remainingCount = elements.length
+  remainingCount = 0
 
   next = () ->
     remainingCount--
     if remainingCount <= 0
       callback null, null
 
-  for element in elements
-    callback next, element
+  if elements.length?
+    remainingCount = elements.length
+    for element in elements
+      callback next, element
+
+  else
+    remainingCount = Object.keys(elements).length
+    for key, value of elements
+      callback next, key, value
 
 module.exports = stitch = (options, callback) ->
   options.identifier   ?= 'require'
   options.sourcePaths  ?= ['lib']
   options.requirePaths ?= ['lib']
+  options.packages     ?= {}
 
   gatherSources options, (err, sources) ->
     if err
@@ -232,16 +240,82 @@ gatherSourcesFromPath = (sourcePath, options, callback) ->
         callback null, sources
 
 stitch.gatherSources = gatherSources = (options, callback) ->
-  {sourcePaths} = options
   sources = {}
-
-  forEachAsync sourcePaths, (next, sourcePath) ->
-    if next
-      gatherSourcesFromPath sourcePath, options, (err, pathSources) ->
+  gatherPackageSources sources, options, (err, sources) ->
+    if err then callback err
+    else
+      gatherSourcePaths sources, options, (err, sources) ->
         if err then callback err
         else
-          for key, value of pathSources
-            sources[key] = value
-        next()
-    else
-      callback null, sources
+          callback null, sources
+
+gatherSourcePaths = (sources, options, callback) ->
+  {sourcePaths} = options
+  sourcePaths ?= []
+
+  if sourcePaths.length is 0
+    callback null, sources
+  else
+    forEachAsync sourcePaths, (next, sourcePath) ->
+      if next
+        gatherSourcesFromPath sourcePath, options, (err, pathSources) ->
+          if err then callback err
+          else
+            for key, value of pathSources
+              sources[key] = value
+          next()
+      else
+        callback null, sources
+
+gatherPackageSources = (sources, options, callback) ->
+  {packages} = options
+  packages ?= {}
+
+  if Object.keys(packages).length is 0
+    callback null, sources
+  else
+    forEachAsync packages, (next, pkg, version) ->
+      if next
+        gatherSourcesFromNpmPackage pkg, version, (err, pathSources) ->
+          if err then callback err
+          else
+            for key, value of pathSources
+              sources[key] = value
+            next()
+      else
+        callback null, sources
+
+npm = require 'npm'
+npm.load {}, (err) ->
+  throw err if err
+
+gatherSourcesFromNpmPackage = (pkg, version, callback) ->
+  packagePath = join npm.dir, pkg, version, "package"
+  jsonFile    = join packagePath, "package.json"
+
+  fs.readFile jsonFile, 'utf8', (err, data) ->
+    return callback err if err
+
+    package      = JSON.parse data
+    mainFilename = join packagePath, package.main
+
+    getRelativePath [packagePath], mainFilename, (err, relativePath) ->
+      return callback err if err
+
+      mainRequirePath = join pkg, version, stripExtension(relativePath)
+
+      pathSources = {}
+
+      # Entry point stub
+      pathSources[pkg] =
+        filename: "#{pkg}.js"
+        source: "module.exports = require('#{mainRequirePath}')"
+
+      fs.readFile mainFilename, 'utf8', (err, source) ->
+        return callback err if err
+
+        pathSources[mainRequirePath] =
+          filename: relativePath
+          source:   source
+
+        callback null, pathSources

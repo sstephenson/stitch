@@ -168,6 +168,22 @@ module.exports =
       test.same "biz", module.baz
       test.done()
 
+  "compile module with npm package": (test) ->
+    test.expect 1
+
+    options =
+      identifier:   "testRequire"
+      sourcePaths:  [fixtures]
+      requirePaths: [fixtures]
+      packages:
+        "underscore": "1.1.3"
+
+    stitch options, (err, sources) ->
+      eval sources
+      test.same "1.1.3", testRequire("underscore").VERSION
+      test.done()
+
+
   "runtime require only loads files once": (test) ->
     test.expect 2
 
