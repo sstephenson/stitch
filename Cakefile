@@ -1,4 +1,4 @@
-require.paths.push __dirname + '/lib'
+require.paths.unshift __dirname + '/lib'
 fs = require 'fs'
 
 task 'build', 'Build lib/ from src/', ->
