@@ -28,6 +28,9 @@ merge = (objects...) ->
 forEachAsync = (elements, callback) ->
   remainingCount = elements.length
 
+  if remainingCount is 0
+    return callback null, null
+
   next = () ->
     remainingCount--
     if remainingCount <= 0

@@ -1,5 +1,6 @@
 sys = require "sys"
-stitch= require "stitch"
+fs  = require "fs"
+stitch = require "stitch"
 
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
@@ -38,6 +39,16 @@ module.exports =
 
     stitch.getFilesInTree fixtures + "/missing", (err, files) ->
       test.ok err
+      test.done()
+
+  "get files in empty directory": (test) ->
+    test.expect 1
+
+    dirname = fixtures + "/empty"
+    fs.mkdirSync dirname, 0755
+    stitch.getFilesInTree dirname, (err, files) ->
+      test.ok !err
+      fs.rmdirSync dirname
       test.done()
 
   "compile file": (test) ->
