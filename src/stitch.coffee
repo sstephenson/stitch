@@ -41,8 +41,7 @@ forEachAsync = (elements, callback) ->
 
 module.exports = stitch = (options, callback) ->
   options.identifier   ?= 'require'
-  options.sourcePaths  ?= ['lib']
-  options.requirePaths ?= ['lib']
+  options.paths ?= ['lib']
 
   gatherSources options, (err, sources) ->
     if err
@@ -176,10 +175,10 @@ stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
     else
       callback null, paths
 
-stitch.getRelativePath = getRelativePath = (requirePaths, path, callback) ->
+stitch.getRelativePath = getRelativePath = (paths, path, callback) ->
   path = normalize path
 
-  expandPaths requirePaths, (err, expandedPaths) ->
+  expandPaths paths, (err, expandedPaths) ->
     return callback err if err
 
     fs.realpath path, (err, path) ->
@@ -197,7 +196,7 @@ stitch.stripExtension = stripExtension = (filename) ->
   filename.slice 0, -extension.length
 
 gatherSource = (path, options, callback) ->
-  getRelativePath options.requirePaths, path, (err, relativePath) ->
+  getRelativePath options.paths, path, (err, relativePath) ->
     if err then callback err
     else
       compileFile path, options, (err, source) ->
@@ -235,10 +234,10 @@ gatherSourcesFromPath = (sourcePath, options, callback) ->
         callback null, sources
 
 stitch.gatherSources = gatherSources = (options, callback) ->
-  {sourcePaths} = options
+  {paths} = options
   sources = {}
 
-  forEachAsync sourcePaths, (next, sourcePath) ->
+  forEachAsync paths, (next, sourcePath) ->
     if next
       gatherSourcesFromPath sourcePath, options, (err, pathSources) ->
         if err then callback err

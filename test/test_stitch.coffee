@@ -8,13 +8,11 @@ altFixtures  = fixtureRoot + "/alternate"
 fixtureCount = 7
 
 defaultOptions =
-  identifier:   "testRequire"
-  sourcePaths:  [fixtures]
-  requirePaths: [fixtures]
+  identifier: "testRequire"
+  paths:      [fixtures]
 
 alternateOptions =
-  sourcePaths:  [altFixtures]
-  requirePaths: [altFixtures]
+  paths: [altFixtures]
 
 module.exports =
   "walk tree": (test) ->
@@ -124,19 +122,6 @@ module.exports =
 
     stitch.gatherSources defaultOptions, (err, sources) ->
       test.ok !err
-      test.same "module.coffee", sources["module"].filename
-      test.ok sources["module"].source
-      test.done()
-
-  "gather sources can include invividual file": (test) ->
-    test.expect 4
-
-    options = Object.create defaultOptions
-    options.sourcePaths = [fixtures + "/module.coffee"]
-
-    stitch.gatherSources options, (err, sources) ->
-      test.ok !err
-      test.same 1, Object.keys(sources).length
       test.same "module.coffee", sources["module"].filename
       test.ok sources["module"].source
       test.done()
