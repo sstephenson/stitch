@@ -111,15 +111,11 @@ exports.Package = class Package
     async.map @paths, fs.realpath, (err, expandedPaths) ->
       return callback err if err
 
-      fs.realpath path, (err, path) ->
-        return callback err if err
-
-        for expandedPath in expandedPaths
-          base = expandedPath + "/"
-          if path.indexOf(base) is 0
-            return callback null, path.slice base.length
-
-        callback "#{path} isn't in the require path"
+      for expandedPath in expandedPaths
+        base = expandedPath + "/"
+        if path.indexOf(base) is 0
+          return callback null, path.slice base.length
+      callback "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)
