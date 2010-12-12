@@ -2,7 +2,6 @@ _       = require 'underscore'
 async   = require 'async'
 connect = require 'connect'
 fs      = require 'fs'
-sys     = require 'sys'
 
 {extname, join, normalize} = require 'path'
 
@@ -56,7 +55,7 @@ exports.Package = class Package
       index = 0
       for name, {filename, source} of sources
         result += if index++ is 0 then "" else ", "
-        result += sys.inspect name
+        result += JSON.stringify name
         result += ": function(exports, require, module) {#{source}}"
 
       result += """
@@ -69,7 +68,7 @@ exports.Package = class Package
     connect.createServer (req, res, next) =>
       @compile (err, source) ->
         if err
-          sys.debug "#{err.stack}"
+          console.error "#{err.stack}"
           message = "" + err.stack
           res.writeHead 500, 'Content-Type': 'text/javascript'
           res.end "throw #{JSON.stringify(message)}"
