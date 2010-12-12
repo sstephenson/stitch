@@ -124,7 +124,7 @@ exports.Package = class Package
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)
 
-    if @cache and @mtimeCache[path] is @compileCache[path]?.mtime
+    if @cache and @compileCache[path] and @mtimeCache[path] is @compileCache[path].mtime
       callback null, @compileCache[path].source
     else if compile = @compilers[extension]
       source = null
