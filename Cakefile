@@ -1,11 +1,11 @@
 require.paths.unshift __dirname + '/lib'
-fs = require 'fs'
+
+{print} = require 'sys'
+{spawn} = require 'child_process'
 
 task 'build', 'Build lib/ from src/', ->
-  CoffeeScript = require 'coffee-script'
-  source = fs.readFileSync __dirname + '/src/stitch.coffee'
-  output = CoffeeScript.compile source.toString()
-  fs.writeFileSync __dirname + '/lib/stitch.js', output
+  coffee = spawn 'coffee', ['-c', '-o', 'lib', 'src']
+  coffee.stdout.on 'data', (data) -> print data.toString()
 
 task 'test', 'Run tests', ->
   invoke 'build'
