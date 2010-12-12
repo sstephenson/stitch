@@ -1,5 +1,7 @@
-fs = require 'fs'
+_   = require 'underscore'
+fs  = require 'fs'
 sys = require 'sys'
+
 {extname, join, normalize} = require 'path'
 
 defaultCompilers =
@@ -13,17 +15,6 @@ try
     content = CoffeeScript.compile fs.readFileSync filename, 'utf8'
     module._compile content, filename
 catch err
-
-extend = (destination, source) ->
-  for key, value of source
-    destination[key] = value
-  destination
-
-merge = (objects...) ->
-  result = {}
-  for object in objects
-    extend result, object if object
-  result
 
 forEachAsync = (elements, callback) ->
   remainingCount = elements.length
@@ -76,7 +67,7 @@ exports.getFilesInTree = getFilesInTree = (directory, callback) ->
       callback err, files.sort()
 
 getCompilersFrom = (options) ->
-  merge defaultCompilers, options.compilers
+  _.extend {}, defaultCompilers, options.compilers
 
 compilerIsAvailableFor = (filename, options) ->
   for name in Object.keys getCompilersFrom options
