@@ -39,46 +39,6 @@ forEachAsync = (elements, callback) ->
   for element in elements
     callback next, element
 
-module.exports = exports = stitch = (options, callback) ->
-  options.identifier   ?= 'require'
-  options.paths ?= ['lib']
-
-  gatherSources options, (err, sources) ->
-    if err
-      callback err
-    else
-      result = """
-        var #{options.identifier} = (function(modules) {
-          var exportCache = {};
-          return function require(name) {
-            var module = exportCache[name];
-            var fn;
-            if (module) {
-              return module;
-            } else if (fn = modules[name]) {
-              module = { id: name, exports: {} };
-              fn(module.exports, require, module);
-              exportCache[name] = module.exports;
-              return module.exports;
-            } else {
-              throw 'module \\'' + name + '\\' not found';
-            }
-          }
-        })({
-      """
-
-      index = 0
-      for name, {filename, source} of sources
-        result += if index++ is 0 then "" else ", "
-        result += sys.inspect name
-        result += ": function(exports, require, module) {#{source}}"
-
-      result += """
-        });\n
-      """
-
-      callback null, result
-
 mtimeCache = {}
 
 exports.walkTree = walkTree = (directory, callback) ->
@@ -255,7 +215,41 @@ exports.Package = class Package
     @paths      = config.paths ? ['lib']
 
   compile: (callback) ->
-    stitch identifier: @identifier, paths: @paths, callback
+    gatherSources paths: @paths, (err, sources) =>
+      if err
+        callback err
+      else
+        result = """
+          var #{@identifier} = (function(modules) {
+            var exportCache = {};
+            return function require(name) {
+              var module = exportCache[name];
+              var fn;
+              if (module) {
+                return module;
+              } else if (fn = modules[name]) {
+                module = { id: name, exports: {} };
+                fn(module.exports, require, module);
+                exportCache[name] = module.exports;
+                return module.exports;
+              } else {
+                throw 'module \\'' + name + '\\' not found';
+              }
+            }
+          })({
+        """
+
+        index = 0
+        for name, {filename, source} of sources
+          result += if index++ is 0 then "" else ", "
+          result += sys.inspect name
+          result += ": function(exports, require, module) {#{source}}"
+
+        result += """
+          });\n
+        """
+
+        callback null, result
 
 exports.createPackage = (config) ->
-  new Pacakge config
+  new Package config
