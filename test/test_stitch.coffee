@@ -96,35 +96,18 @@ module.exports =
       test.ok err.toString().match(/no compiler/)
       test.done()
 
-  "expand paths": (test) ->
-    test.expect 3
-
-    stitch.expandPaths [__dirname + "/../test/fixtures/default"], (err, expandedPaths) ->
-      test.ok !err
-      test.ok expandedPaths
-      test.same [fixtures], expandedPaths
-      test.done()
-
   "get relative path": (test) ->
     test.expect 2
 
-    stitch.getRelativePath [fixtures], fixtures + "/foo/bar.coffee", (err, path) ->
+    defaultPackage.getRelativePath fixtures + "/foo/bar.coffee", (err, path) ->
       test.ok !err
       test.same 'foo/bar.coffee', path
       test.done()
 
-  "strip extension": (test) ->
-    test.expect 1
-
-    filename = stitch.stripExtension "module.coffee"
-    test.same "module", filename
-
-    test.done()
-
   "gather sources": (test) ->
     test.expect 3
 
-    stitch.gatherSources defaultOptions, (err, sources) ->
+    defaultPackage.gatherSources (err, sources) ->
       test.ok !err
       test.same "module.coffee", sources["module"].filename
       test.ok sources["module"].source

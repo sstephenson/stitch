@@ -121,7 +121,8 @@ exports.compileFile = compileFile = (path, options, callback) ->
     else
       callback "no compiler for '.#{extension}' files"
 
-exports.expandPaths = expandPaths = (sourcePaths, callback) ->
+
+expandPaths = (sourcePaths, callback) ->
   paths = []
 
   forEachAsync sourcePaths, (next, sourcePath) ->
@@ -135,78 +136,9 @@ exports.expandPaths = expandPaths = (sourcePaths, callback) ->
     else
       callback null, paths
 
-exports.getRelativePath = getRelativePath = (paths, path, callback) ->
-  path = normalize path
-
-  expandPaths paths, (err, expandedPaths) ->
-    return callback err if err
-
-    fs.realpath path, (err, path) ->
-      return callback err if err
-
-      for expandedPath in expandedPaths
-        base = expandedPath + "/"
-        if path.indexOf(base) is 0
-          return callback null, path.slice base.length
-
-      callback "#{path} isn't in the require path"
-
-exports.stripExtension = stripExtension = (filename) ->
+stripExtension = (filename) ->
   extension = extname filename
   filename.slice 0, -extension.length
-
-gatherSource = (path, options, callback) ->
-  getRelativePath options.paths, path, (err, relativePath) ->
-    if err then callback err
-    else
-      compileFile path, options, (err, source) ->
-        if err then callback err
-        else
-          callback err, stripExtension(relativePath),
-            filename: relativePath
-            source:   source
-
-gatherSourcesFromPath = (sourcePath, options, callback) ->
-  fs.stat sourcePath, (err, stat) ->
-    if err then return callback err
-
-    sources = {}
-
-    if stat.isDirectory()
-      getFilesInTree sourcePath, (err, paths) ->
-        if err then callback err
-        else
-          forEachAsync paths, (next, path) ->
-            if next
-              if compilerIsAvailableFor path, options
-                gatherSource path, options, (err, key, value) ->
-                  if err then callback err
-                  else sources[key] = value
-                  next()
-              else
-                next()
-            else
-              callback null, sources
-    else
-      gatherSource sourcePath, options, (err, key, value) ->
-        if err then callback err
-        else sources[key] = value
-        callback null, sources
-
-exports.gatherSources = gatherSources = (options, callback) ->
-  {paths} = options
-  sources = {}
-
-  forEachAsync paths, (next, sourcePath) ->
-    if next
-      gatherSourcesFromPath sourcePath, options, (err, pathSources) ->
-        if err then callback err
-        else
-          for key, value of pathSources
-            sources[key] = value
-        next()
-    else
-      callback null, sources
 
 
 exports.Package = class Package
@@ -215,7 +147,7 @@ exports.Package = class Package
     @paths      = config.paths ? ['lib']
 
   compile: (callback) ->
-    gatherSources paths: @paths, (err, sources) =>
+    @gatherSources (err, sources) =>
       if err
         callback err
       else
@@ -250,6 +182,84 @@ exports.Package = class Package
         """
 
         callback null, result
+
+
+  gatherSources: (callback) ->
+    sources = {}
+
+    forEachAsync @paths, (next, sourcePath) =>
+      if next
+        @gatherSourcesFromPath sourcePath, (err, pathSources) ->
+          if err then callback err
+          else
+            for key, value of pathSources
+              sources[key] = value
+          next()
+      else
+        callback null, sources
+
+  gatherSourcesFromPath: (sourcePath, callback) ->
+    options =
+      paths: @paths
+
+    fs.stat sourcePath, (err, stat) =>
+      if err then return callback err
+
+      sources = {}
+
+      if stat.isDirectory()
+        getFilesInTree sourcePath, (err, paths) =>
+          if err then callback err
+          else
+            forEachAsync paths, (next, path) =>
+              if next
+                if compilerIsAvailableFor path, options
+                  @gatherSource path, (err, key, value) ->
+                    if err then callback err
+                    else sources[key] = value
+                    next()
+                else
+                  next()
+              else
+                callback null, sources
+      else
+        @gatherSource sourcePath, (err, key, value) ->
+          if err then callback err
+          else sources[key] = value
+          callback null, sources
+
+  gatherSource: (path, callback) ->
+    options =
+      paths: @paths
+
+    @getRelativePath path, (err, relativePath) ->
+      if err then callback err
+      else
+        compileFile path, options, (err, source) ->
+          if err then callback err
+          else
+            callback err, stripExtension(relativePath),
+              filename: relativePath
+              source:   source
+
+  getRelativePath: (path, callback) ->
+    path = normalize path
+
+    expandPaths @paths, (err, expandedPaths) ->
+      return callback err if err
+
+      fs.realpath path, (err, path) ->
+        return callback err if err
+
+        for expandedPath in expandedPaths
+          base = expandedPath + "/"
+          if path.indexOf(base) is 0
+            return callback null, path.slice base.length
+
+        callback "#{path} isn't in the require path"
+
+
+
 
 exports.createPackage = (config) ->
   new Package config
