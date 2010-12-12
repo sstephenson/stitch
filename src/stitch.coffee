@@ -24,7 +24,7 @@ exports.Package = class Package
     @paths      = config.paths or ['lib']
     @compilers  = _.extend {}, defaultCompilers, config.compilers
 
-    @cache        = config.cache or false
+    @cache        = config.cache or true
     @mtimeCache   = {}
     @compileCache = {}
 
