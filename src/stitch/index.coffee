@@ -1,6 +1,7 @@
-_   = require 'underscore'
-fs  = require 'fs'
-sys = require 'sys'
+_     = require 'underscore'
+async = require 'async'
+fs    = require 'fs'
+sys   = require 'sys'
 
 {extname, join, normalize} = require 'path'
 
@@ -16,45 +17,29 @@ try
     module._compile content, filename
 catch err
 
-forEachAsync = (elements, callback) ->
-  remainingCount = elements.length
-
-  if remainingCount is 0
-    return callback null, null
-
-  next = () ->
-    remainingCount--
-    if remainingCount <= 0
-      callback null, null
-
-  for element in elements
-    callback next, element
-
 mtimeCache = {}
 
 exports.walkTree = walkTree = (directory, callback) ->
   fs.readdir directory, (err, files) ->
-    if err then return callback err
+    return callback err if err
 
-    forEachAsync files, (next, file) ->
-      if next
-        return next() if file.match /^\./
-        filename = join directory, file
+    async.forEach files, (file, next) ->
+      return next() if file.match /^\./
+      filename = join directory, file
 
-        fs.stat filename, (err, stats) ->
-          mtimeCache[filename] = stats?.mtime?.toString()
+      fs.stat filename, (err, stats) ->
+        mtimeCache[filename] = stats?.mtime?.toString()
 
-          if !err and stats.isDirectory()
-            walkTree filename, (err, filename) ->
-              if filename
-                callback err, filename
-              else
-                next()
-          else
-            callback err, filename
-            next()
-      else
-        callback err, null
+        if !err and stats.isDirectory()
+          walkTree filename, (err, filename) ->
+            if filename
+              callback err, filename
+            else
+              next()
+        else
+          callback err, filename
+          next()
+    , callback
 
 exports.getFilesInTree = getFilesInTree = (directory, callback) ->
   files = []
@@ -114,18 +99,7 @@ exports.compileFile = compileFile = (path, options, callback) ->
 
 
 expandPaths = (sourcePaths, callback) ->
-  paths = []
-
-  forEachAsync sourcePaths, (next, sourcePath) ->
-    if next
-      fs.realpath sourcePath, (err, path) ->
-        if err
-          callback err
-        else
-          paths.push normalize path
-        next()
-    else
-      callback null, paths
+  async.map sourcePaths, fs.realpath, callback
 
 stripExtension = (filename) ->
   extension = extname filename
@@ -176,18 +150,10 @@ exports.Package = class Package
 
 
   gatherSources: (callback) ->
-    sources = {}
-
-    forEachAsync @paths, (next, sourcePath) =>
-      if next
-        @gatherSourcesFromPath sourcePath, (err, pathSources) ->
-          if err then callback err
-          else
-            for key, value of pathSources
-              sources[key] = value
-          next()
-      else
-        callback null, sources
+    # TODO: use async.reduce
+    async.map @paths, @gatherSourcesFromPath.bind(@), (err, results) ->
+      return callback err if err
+      callback null, _.extend {}, results...
 
   gatherSourcesFromPath: (sourcePath, callback) ->
     options =
@@ -196,28 +162,25 @@ exports.Package = class Package
     fs.stat sourcePath, (err, stat) =>
       if err then return callback err
 
-      sources = {}
-
       if stat.isDirectory()
         getFilesInTree sourcePath, (err, paths) =>
           if err then callback err
           else
-            forEachAsync paths, (next, path) =>
-              if next
-                if compilerIsAvailableFor path, options
-                  @gatherSource path, (err, key, value) ->
-                    if err then callback err
-                    else sources[key] = value
-                    next()
-                else
-                  next()
+            async.reduce paths, {}, (sources, path, next) =>
+              if compilerIsAvailableFor path, options
+                @gatherSource path, (err, key, value) ->
+                  sources[key] = value
+                  next err, sources
               else
-                callback null, sources
+                next null, sources
+            , callback
       else
         @gatherSource sourcePath, (err, key, value) ->
           if err then callback err
-          else sources[key] = value
-          callback null, sources
+          else
+            sources = {}
+            sources[key] = value
+            callback null, sources
 
   gatherSource: (path, callback) ->
     options =

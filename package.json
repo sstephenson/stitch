@@ -15,6 +15,7 @@
   , "url": "http://github.com/sstephenson/stitch.git"
   }
 , "dependencies": {
+  , "async": ">=0.1.6"
     "underscore": ">=1.1.3"
   }
 }
