@@ -1,7 +1,8 @@
-_     = require 'underscore'
-async = require 'async'
-fs    = require 'fs'
-sys   = require 'sys'
+_       = require 'underscore'
+async   = require 'async'
+connect = require 'connect'
+fs      = require 'fs'
+sys     = require 'sys'
 
 {extname, join, normalize} = require 'path'
 
@@ -27,7 +28,6 @@ exports.Package = class Package
     @cache        = config.cache or false
     @mtimeCache   = {}
     @compileCache = {}
-
 
   compile: (callback) ->
     async.reduce @paths, {}, @gatherSourcesFromPath.bind(@), (err, sources) =>
@@ -64,6 +64,18 @@ exports.Package = class Package
       """
 
       callback err, result
+
+  createServer: ->
+    connect.createServer (req, res, next) =>
+      @compile (err, source) ->
+        if err
+          sys.debug "#{err.stack}"
+          message = "" + err.stack
+          res.writeHead 500, 'Content-Type': 'text/javascript'
+          res.end "throw #{JSON.stringify(message)}"
+        else
+          res.writeHead 200, 'Content-Type': 'text/javascript'
+          res.end source
 
 
   gatherSourcesFromPath: (sources, sourcePath, callback) ->
