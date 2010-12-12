@@ -39,7 +39,7 @@ forEachAsync = (elements, callback) ->
   for element in elements
     callback next, element
 
-module.exports = stitch = (options, callback) ->
+module.exports = exports = stitch = (options, callback) ->
   options.identifier   ?= 'require'
   options.paths ?= ['lib']
 
@@ -81,7 +81,7 @@ module.exports = stitch = (options, callback) ->
 
 mtimeCache = {}
 
-stitch.walkTree = walkTree = (directory, callback) ->
+exports.walkTree = walkTree = (directory, callback) ->
   fs.readdir directory, (err, files) ->
     if err then return callback err
 
@@ -105,7 +105,7 @@ stitch.walkTree = walkTree = (directory, callback) ->
       else
         callback err, null
 
-stitch.getFilesInTree = getFilesInTree = (directory, callback) ->
+exports.getFilesInTree = getFilesInTree = (directory, callback) ->
   files = []
   walkTree directory, (err, filename) ->
     if err
@@ -135,7 +135,7 @@ putCompiledSourceToCache = (path, source) ->
   if mtime = mtimeCache[path]
     compileCache[path] = {mtime, source}
 
-stitch.compileFile = compileFile = (path, options, callback) ->
+exports.compileFile = compileFile = (path, options, callback) ->
   if options.cache and source = getCompiledSourceFromCache path
     callback null, source
   else
@@ -161,7 +161,7 @@ stitch.compileFile = compileFile = (path, options, callback) ->
     else
       callback "no compiler for '.#{extension}' files"
 
-stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
+exports.expandPaths = expandPaths = (sourcePaths, callback) ->
   paths = []
 
   forEachAsync sourcePaths, (next, sourcePath) ->
@@ -175,7 +175,7 @@ stitch.expandPaths = expandPaths = (sourcePaths, callback) ->
     else
       callback null, paths
 
-stitch.getRelativePath = getRelativePath = (paths, path, callback) ->
+exports.getRelativePath = getRelativePath = (paths, path, callback) ->
   path = normalize path
 
   expandPaths paths, (err, expandedPaths) ->
@@ -191,7 +191,7 @@ stitch.getRelativePath = getRelativePath = (paths, path, callback) ->
 
       callback "#{path} isn't in the require path"
 
-stitch.stripExtension = stripExtension = (filename) ->
+exports.stripExtension = stripExtension = (filename) ->
   extension = extname filename
   filename.slice 0, -extension.length
 
@@ -233,7 +233,7 @@ gatherSourcesFromPath = (sourcePath, options, callback) ->
         else sources[key] = value
         callback null, sources
 
-stitch.gatherSources = gatherSources = (options, callback) ->
+exports.gatherSources = gatherSources = (options, callback) ->
   {paths} = options
   sources = {}
 
@@ -247,3 +247,15 @@ stitch.gatherSources = gatherSources = (options, callback) ->
         next()
     else
       callback null, sources
+
+
+exports.Package = class Package
+  constructor: (config) ->
+    @identifier = config.identifier ? 'require'
+    @paths      = config.paths ? ['lib']
+
+  compile: (callback) ->
+    stitch identifier: @identifier, paths: @paths, callback
+
+exports.createPackage = (config) ->
+  new Pacakge config
