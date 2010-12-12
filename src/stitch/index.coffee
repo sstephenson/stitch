@@ -17,189 +17,87 @@ try
     module._compile content, filename
 catch err
 
-mtimeCache = {}
-
-exports.walkTree = walkTree = (directory, callback) ->
-  fs.readdir directory, (err, files) ->
-    return callback err if err
-
-    async.forEach files, (file, next) ->
-      return next() if file.match /^\./
-      filename = join directory, file
-
-      fs.stat filename, (err, stats) ->
-        mtimeCache[filename] = stats?.mtime?.toString()
-
-        if !err and stats.isDirectory()
-          walkTree filename, (err, filename) ->
-            if filename
-              callback err, filename
-            else
-              next()
-        else
-          callback err, filename
-          next()
-    , callback
-
-exports.getFilesInTree = getFilesInTree = (directory, callback) ->
-  files = []
-  walkTree directory, (err, filename) ->
-    if err
-      callback err
-    else if filename
-      files.push filename
-    else
-      callback err, files.sort()
-
-getCompilersFrom = (options) ->
-  _.extend {}, defaultCompilers, options.compilers
-
-compilerIsAvailableFor = (filename, options) ->
-  for name in Object.keys getCompilersFrom options
-    extension = extname(filename).slice(1)
-    return true if name is extension
-  false
-
-compileCache = {}
-
-getCompiledSourceFromCache = (path) ->
-  if cache = compileCache[path]
-    if mtimeCache[path] is cache.mtime
-      cache.source
-
-putCompiledSourceToCache = (path, source) ->
-  if mtime = mtimeCache[path]
-    compileCache[path] = {mtime, source}
-
-exports.compileFile = compileFile = (path, options, callback) ->
-  if options.cache and source = getCompiledSourceFromCache path
-    callback null, source
-  else
-    compilers = getCompilersFrom options
-    extension = extname(path).slice(1)
-
-    if compile = compilers[extension]
-      source = null
-      mod =
-        _compile: (content, filename) ->
-          source = content
-
-      try
-        compile mod, path
-        putCompiledSourceToCache path, source if options.cache
-        callback null, source
-      catch err
-        if err instanceof Error
-          err.message = "can't compile #{path}\n#{err.message}"
-        else
-          err = new Error "can't compile #{path}\n#{err}"
-        callback err
-    else
-      callback "no compiler for '.#{extension}' files"
-
-
-expandPaths = (sourcePaths, callback) ->
-  async.map sourcePaths, fs.realpath, callback
-
-stripExtension = (filename) ->
-  extension = extname filename
-  filename.slice 0, -extension.length
-
 
 exports.Package = class Package
   constructor: (config) ->
-    @identifier = config.identifier ? 'require'
-    @paths      = config.paths ? ['lib']
+    @identifier = config.identifier or 'require'
+    @paths      = config.paths or ['lib']
+    @compilers  = _.extend {}, defaultCompilers, config.compilers
+
+    @cache        = config.cache or false
+    @mtimeCache   = {}
+    @compileCache = {}
+
 
   compile: (callback) ->
-    @gatherSources (err, sources) =>
-      if err
-        callback err
-      else
-        result = """
-          var #{@identifier} = (function(modules) {
-            var exportCache = {};
-            return function require(name) {
-              var module = exportCache[name];
-              var fn;
-              if (module) {
-                return module;
-              } else if (fn = modules[name]) {
-                module = { id: name, exports: {} };
-                fn(module.exports, require, module);
-                exportCache[name] = module.exports;
-                return module.exports;
-              } else {
-                throw 'module \\'' + name + '\\' not found';
-              }
-            }
-          })({
-        """
-
-        index = 0
-        for name, {filename, source} of sources
-          result += if index++ is 0 then "" else ", "
-          result += sys.inspect name
-          result += ": function(exports, require, module) {#{source}}"
-
-        result += """
-          });\n
-        """
-
-        callback null, result
-
-
-  gatherSources: (callback) ->
-    # TODO: use async.reduce
-    async.map @paths, @gatherSourcesFromPath.bind(@), (err, results) ->
+    async.reduce @paths, {}, @gatherSourcesFromPath.bind(@), (err, sources) =>
       return callback err if err
-      callback null, _.extend {}, results...
 
-  gatherSourcesFromPath: (sourcePath, callback) ->
-    options =
-      paths: @paths
+      result = """
+        var #{@identifier} = (function(modules) {
+          var exportCache = {};
+          return function require(name) {
+            var module = exportCache[name];
+            var fn;
+            if (module) {
+              return module;
+            } else if (fn = modules[name]) {
+              module = { id: name, exports: {} };
+              fn(module.exports, require, module);
+              exportCache[name] = module.exports;
+              return module.exports;
+            } else {
+              throw 'module \\'' + name + '\\' not found';
+            }
+          }
+        })({
+      """
 
+      index = 0
+      for name, {filename, source} of sources
+        result += if index++ is 0 then "" else ", "
+        result += sys.inspect name
+        result += ": function(exports, require, module) {#{source}}"
+
+      result += """
+        });\n
+      """
+
+      callback err, result
+
+
+  gatherSourcesFromPath: (sources, sourcePath, callback) ->
     fs.stat sourcePath, (err, stat) =>
-      if err then return callback err
+      return callback err if err
 
       if stat.isDirectory()
-        getFilesInTree sourcePath, (err, paths) =>
-          if err then callback err
-          else
-            async.reduce paths, {}, (sources, path, next) =>
-              if compilerIsAvailableFor path, options
-                @gatherSource path, (err, key, value) ->
-                  sources[key] = value
-                  next err, sources
-              else
-                next null, sources
-            , callback
+        @getFilesInTree sourcePath, (err, paths) =>
+          return callback err if err
+          async.reduce paths, sources, @gatherCompilableSource.bind(@), callback
       else
-        @gatherSource sourcePath, (err, key, value) ->
+        @gatherCompilableSource sources, sourcePath, callback
+
+  gatherCompilableSource: (sources, path, callback) ->
+    if @compilers[extname(path).slice(1)]
+      @getRelativePath path, (err, relativePath) =>
+        return callback err if err
+
+        @compileFile path, (err, source) ->
           if err then callback err
           else
-            sources = {}
-            sources[key] = value
-            callback null, sources
-
-  gatherSource: (path, callback) ->
-    options =
-      paths: @paths
-
-    @getRelativePath path, (err, relativePath) ->
-      if err then callback err
-      else
-        compileFile path, options, (err, source) ->
-          if err then callback err
-          else
-            callback err, stripExtension(relativePath),
+            extension = extname relativePath
+            key       = relativePath.slice(0, -extension.length)
+            sources[key] =
               filename: relativePath
               source:   source
+            callback err, sources
+    else
+      callback null, sources
 
   getRelativePath: (path, callback) ->
     path = normalize path
 
-    expandPaths @paths, (err, expandedPaths) ->
+    async.map @paths, fs.realpath, (err, expandedPaths) ->
       return callback err if err
 
       fs.realpath path, (err, path) ->
@@ -212,7 +110,64 @@ exports.Package = class Package
 
         callback "#{path} isn't in the require path"
 
+  compileFile: (path, callback) ->
+    extension = extname(path).slice(1)
 
+    if @cache and @mtimeCache[path] is @compileCache[path]?.mtime
+      callback null, @compileCache[path].source
+    else if compile = @compilers[extension]
+      source = null
+      mod =
+        _compile: (content, filename) ->
+          source = content
+
+      try
+        compile mod, path
+
+        if @cache and mtime = @mtimeCache[path]
+          @compileCache[path] = {mtime, source}
+
+        callback null, source
+      catch err
+        if err instanceof Error
+          err.message = "can't compile #{path}\n#{err.message}"
+        else
+          err = new Error "can't compile #{path}\n#{err}"
+        callback err
+    else
+      callback "no compiler for '.#{extension}' files"
+
+  walkTree: (directory, callback) ->
+    fs.readdir directory, (err, files) =>
+      return callback err if err
+
+      async.forEach files, (file, next) =>
+        return next() if file.match /^\./
+        filename = join directory, file
+
+        fs.stat filename, (err, stats) =>
+          @mtimeCache[filename] = stats?.mtime?.toString()
+
+          if !err and stats.isDirectory()
+            @walkTree filename, (err, filename) ->
+              if filename
+                callback err, filename
+              else
+                next()
+          else
+            callback err, filename
+            next()
+      , callback
+
+  getFilesInTree: (directory, callback) ->
+    files = []
+    @walkTree directory, (err, filename) ->
+      if err
+        callback err
+      else if filename
+        files.push filename
+      else
+        callback err, files.sort()
 
 
 exports.createPackage = (config) ->

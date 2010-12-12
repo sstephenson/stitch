@@ -22,7 +22,7 @@ module.exports =
   "walk tree": (test) ->
     test.expect fixtureCount
 
-    stitch.walkTree fixtures, (err, file) ->
+    defaultPackage.walkTree fixtures, (err, file) ->
       if file
         test.ok file
       else
@@ -31,7 +31,7 @@ module.exports =
   "get files in tree": (test) ->
     test.expect 2
 
-    stitch.getFilesInTree fixtures, (err, files) ->
+    defaultPackage.getFilesInTree fixtures, (err, files) ->
       test.ok !err
       test.same fixtureCount, files.length
       test.done()
@@ -39,7 +39,7 @@ module.exports =
   "get files in tree that does not exist": (test) ->
     test.expect 1
 
-    stitch.getFilesInTree fixtures + "/missing", (err, files) ->
+    defaultPackage.getFilesInTree fixtures + "/missing", (err, files) ->
       test.ok err
       test.done()
 
@@ -48,7 +48,7 @@ module.exports =
 
     dirname = fixtures + "/empty"
     fs.mkdirSync dirname, 0755
-    stitch.getFilesInTree dirname, (err, files) ->
+    defaultPackage.getFilesInTree dirname, (err, files) ->
       test.ok !err
       fs.rmdirSync dirname
       test.done()
@@ -56,7 +56,7 @@ module.exports =
   "compile file": (test) ->
     test.expect 2
 
-    stitch.compileFile __filename, defaultOptions, (err, source) ->
+    defaultPackage.compileFile __filename, (err, source) ->
       test.ok !err
       test.ok source.match(/\(function\(\) \{/)
       test.done()
@@ -64,14 +64,14 @@ module.exports =
   "compile file does not exist": (test) ->
     test.expect 1
 
-    stitch.compileFile "nosuchthing.coffee", defaultOptions, (err, source) ->
+    defaultPackage.compileFile "nosuchthing.coffee", (err, source) ->
       test.ok err
       test.done()
 
   "compile file with syntax error": (test) ->
     test.expect 1
 
-    stitch.compileFile altFixtures + "/nonsense.coffee", alternateOptions, (err, source) ->
+    alternatePackage.compileFile altFixtures + "/nonsense.coffee", (err, source) ->
       test.ok err.toString().match(/SyntaxError/)
       test.done()
 
@@ -84,15 +84,16 @@ module.exports =
         source = require('fs').readFileSync filename, 'utf8'
         source = "alert(#{sys.inspect source});"
         module._compile source, filename
+    package = stitch.createPackage options
 
-    stitch.compileFile altFixtures + "/hello.alert", options, (err, source) ->
+    package.compileFile altFixtures + "/hello.alert", (err, source) ->
       test.same "alert('hello world\\n');", source
       test.done()
 
   "compile file with unknown extension": (test) ->
     test.expect 1
 
-    stitch.compileFile altFixtures + "/hello.alert", alternateOptions, (err, source) ->
+    alternatePackage.compileFile altFixtures + "/hello.alert", (err, source) ->
       test.ok err.toString().match(/no compiler/)
       test.done()
 
@@ -102,15 +103,6 @@ module.exports =
     defaultPackage.getRelativePath fixtures + "/foo/bar.coffee", (err, path) ->
       test.ok !err
       test.same 'foo/bar.coffee', path
-      test.done()
-
-  "gather sources": (test) ->
-    test.expect 3
-
-    defaultPackage.gatherSources (err, sources) ->
-      test.ok !err
-      test.same "module.coffee", sources["module"].filename
-      test.ok sources["module"].source
       test.done()
 
   "compile generates valid javascript": (test) ->
@@ -123,9 +115,10 @@ module.exports =
       test.done()
 
   "compile module with custom exports": (test) ->
-    test.expect 2
+    test.expect 3
 
     defaultPackage.compile (err, sources) ->
+      test.ok !err
       eval sources
       result = testRequire("custom_exports")
       test.ok typeof result is "function"
@@ -133,17 +126,19 @@ module.exports =
       test.done()
 
   "compile module with exported property": (test) ->
-    test.expect 1
+    test.expect 2
 
     defaultPackage.compile (err, sources) ->
+      test.ok !err
       eval sources
       test.same "bar", testRequire("exported_property").foo
       test.done()
 
   "compile module with requires": (test) ->
-    test.expect 3
+    test.expect 4
 
     defaultPackage.compile (err, sources) ->
+      test.ok !err
       eval sources
       module = testRequire("module")
       test.same "bar", module.foo
@@ -152,14 +147,13 @@ module.exports =
       test.done()
 
   "runtime require only loads files once": (test) ->
-    test.expect 2
+    test.expect 3
 
     defaultPackage.compile (err, sources) ->
+      test.ok !err
       eval sources
-
       module = testRequire("module")
       test.ok !module.x
       module.x = "foo"
       test.same "foo", testRequire("module").x
-
       test.done()
