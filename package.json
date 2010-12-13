@@ -16,7 +16,6 @@
   }
 , "dependencies":
   { "async": ">=0.1.6"
-  , "connect": ">=0.3.0"
   , "underscore": ">=1.1.3"
   }
 }

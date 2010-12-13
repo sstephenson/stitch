@@ -1,7 +1,6 @@
-_       = require 'underscore'
-async   = require 'async'
-connect = require 'connect'
-fs      = require 'fs'
+_     = require 'underscore'
+async = require 'async'
+fs    = require 'fs'
 
 {extname, join, normalize} = require 'path'
 
