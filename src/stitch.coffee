@@ -65,7 +65,7 @@ exports.Package = class Package
       callback err, result
 
   createServer: ->
-    connect.createServer (req, res, next) =>
+    (req, res, next) =>
       @compile (err, source) ->
         if err
           console.error "#{err.stack}"
