@@ -28,7 +28,7 @@ exports.Package = class Package
     @compileCache = {}
 
   compile: (callback) ->
-    async.reduce @paths, {}, @gatherSourcesFromPath.bind(@), (err, sources) =>
+    async.reduce @paths, {}, _.bind(@gatherSourcesFromPath, @), (err, sources) =>
       return callback err if err
 
       result = """
@@ -83,7 +83,7 @@ exports.Package = class Package
       if stat.isDirectory()
         @getFilesInTree sourcePath, (err, paths) =>
           return callback err if err
-          async.reduce paths, sources, @gatherCompilableSource.bind(@), callback
+          async.reduce paths, sources, _.bind(@gatherCompilableSource, @), callback
       else
         @gatherCompilableSource sources, sourcePath, callback
 
