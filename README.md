@@ -13,3 +13,4 @@ Node.js. Then __Stitch__ them together to run in the browser.
 
     var app = express.createServer();
     app.get('/application.js', package.createServer());
+    app.listen(3000);
