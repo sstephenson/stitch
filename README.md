@@ -4,6 +4,10 @@ width=432 height=329>
 Develop and test your JavaScript applications as CommonJS modules in
 Node.js. Then __Stitch__ them together to run in the browser.
 
+    npm install stitch
+
+Bundle code in lib/ and vendor/ and serve it with [Express](http://expressjs.com/):
+
     var stitch  = require('stitch');
     var express = require('express');
 
