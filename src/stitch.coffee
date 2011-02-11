@@ -39,12 +39,7 @@ exports.Package = class Package
             var fn;
             if (module) {
               return module;
-            } else if (fn = modules[name]) {
-              module = { id: name, exports: {} };
-              fn(module.exports, require, module);
-              exportCache[name] = module.exports;
-              return module.exports;
-            } else if (fn = modules[name +"/index"]) {
+            } else if (fn = modules[name] || fn = modules[name +"/index"]) {
               module = { id: name, exports: {} };
               fn(module.exports, require, module);
               exportCache[name] = module.exports;
