@@ -5,7 +5,7 @@ stitch = require "stitch"
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
-fixtureCount = 7
+fixtureCount = 8
 
 defaultOptions =
   identifier: "testRequire"
@@ -156,4 +156,14 @@ module.exports =
       test.ok !module.x
       module.x = "foo"
       test.same "foo", testRequire("module").x
+      test.done()
+
+  "look for module index if necessary": (test) ->
+    test.expect 2
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      eval sources
+      buz= testRequire("foo/buz").buz
+      test.same buz,  "BUZ"
       test.done()

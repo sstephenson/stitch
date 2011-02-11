@@ -44,6 +44,11 @@ exports.Package = class Package
               fn(module.exports, require, module);
               exportCache[name] = module.exports;
               return module.exports;
+            } else if (fn = modules[name +"/index"]) {
+              module = { id: name, exports: {} };
+              fn(module.exports, require, module);
+              exportCache[name] = module.exports;
+              return module.exports;
             } else {
               throw 'module \\'' + name + '\\' not found';
             }
