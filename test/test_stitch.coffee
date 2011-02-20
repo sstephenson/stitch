@@ -7,7 +7,7 @@ fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
-fixtureCount = 11
+fixtureCount = 15
 
 defaultOptions =
   identifier: "testRequire"
@@ -24,9 +24,22 @@ alternateOptions =
 alternatePackage = stitch.createPackage alternateOptions
 
 ecoOptions =
+  identifier: "testRequire"
   paths:      [ecoFixtures]
 ecoPackage = stitch.createPackage ecoOptions
 
+load = (source, callback) ->
+  (-> eval source).call module = {}
+  callback? (source) -> (-> eval source).call module
+  module.testRequire
+
+rescue = (callback) ->
+  rescued = false
+  try
+    callback()
+  catch err
+    rescued = true
+  rescued
 
 module.exports =
   "walk tree": (test) ->
@@ -120,8 +133,8 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      test.ok typeof @testRequire is "function"
+      testRequire = load sources
+      test.ok typeof testRequire is "function"
       test.done()
 
   "compile module with custom exports": (test) ->
@@ -129,8 +142,8 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      result = @testRequire("custom_exports")
+      testRequire = load sources
+      result = testRequire("custom_exports")
       test.ok typeof result is "function"
       test.same "foo", result()
       test.done()
@@ -140,8 +153,8 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      test.same "bar", @testRequire("exported_property").foo
+      testRequire = load sources
+      test.same "bar", testRequire("exported_property").foo
       test.done()
 
   "compile module with requires": (test) ->
@@ -149,8 +162,8 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      module = @testRequire("module")
+      testRequire = load sources
+      module = testRequire("module")
       test.same "bar", module.foo
       test.same "foo", module.bar()
       test.same "biz", module.baz
@@ -161,11 +174,11 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      module = @testRequire("module")
+      testRequire = load sources
+      module = testRequire("module")
       test.ok !module.x
       module.x = "foo"
-      test.same "foo", @testRequire("module").x
+      test.same "foo", testRequire("module").x
       test.done()
 
   "look for module index if necessary": (test) ->
@@ -173,8 +186,8 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
-      buz = @testRequire("foo/buz").buz
+      testRequire = load sources
+      buz = testRequire("foo/buz").buz
       test.same buz, "BUZ"
       test.done()
 
@@ -183,20 +196,15 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
+      testRequire = load sources
 
-      raised = false
-      try
-        @testRequire("frob")
-      catch e
-        raised = true
-      test.ok raised
+      test.ok rescue -> testRequire("frob")
 
-      @testRequire.define
+      testRequire.define
         "frob": (exports, require, module) ->
           exports.frob = require("foo/buz").buz
 
-      test.same "BUZ", @testRequire("frob").frob
+      test.same "BUZ", testRequire("frob").frob
       test.done()
 
   "multiple packages may share the same require namespace": (test) ->
@@ -204,25 +212,24 @@ module.exports =
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
+      testRequire = load sources, (load) ->
+        additionalPackage.compile (err, sources) ->
+          test.ok !err
+          load sources
 
-      additionalPackage.compile (err, sources) =>
-        test.ok !err
-        eval sources
-
-        test.same "hello", @testRequire("hello").hello
-        test.same "additional/foo/bar.js", @testRequire("foo/bar").filename
-        test.same "biz", @testRequire("foo/bar/baz").baz;
-        test.done()
+          test.same "hello", testRequire("hello").hello
+          test.same "additional/foo/bar.js", testRequire("foo/bar").filename
+          test.same "biz", testRequire("foo/bar/baz").baz;
+          test.done()
 
   "relative require": (test) ->
     test.expect 6
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
+      testRequire = load sources
 
-      relative = @testRequire("relative")
+      relative = testRequire("relative")
       test.same "a", relative.a.a
       test.same "b", relative.a.b
       test.same "foo", relative.custom()
@@ -230,14 +237,38 @@ module.exports =
       test.same "BUZ", relative.buz
       test.done()
 
+  "circular require": (test) ->
+    test.expect 4
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+
+      circular = testRequire("circular")
+      test.same "a", circular.a.a()
+      test.same "a", circular.b.b()
+      test.same "a", circular.a.b()
+      test.done()
+
+  "errors at require time don't leave behind a partially loaded cache": (test) ->
+    test.expect 3
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+
+      test.ok rescue -> testRequire("circular/error")
+      test.ok rescue -> testRequire("circular/error")
+      test.done()
+
 if stitch.compilers.eco
   module.exports["eco compiler"] = (test) ->
     test.expect 2
     ecoPackage.compile (err, sources) ->
       test.ok !err
-      eval sources
+      testRequire = load sources
 
-      html = @require("hello.html")(name: "Sam").trim()
+      html = testRequire("hello.html")(name: "Sam").trim()
       test.same "hello Sam!", html.split("\n").pop()
       test.done()
 

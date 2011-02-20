@@ -47,11 +47,16 @@ exports.Package = class Package
                 return module;
               } else if ((fn = modules[path]) || (fn = modules[path = expand(path, './index')])) {
                 module = {id: name, exports: {}};
-                fn(module.exports, function(name) {
-                  return require(name, dirname(path));
-                }, module);
-                cache[name] = module.exports;
-                return module.exports;
+                try {
+                  cache[name] = module.exports;
+                  fn(module.exports, function(name) {
+                    return require(name, dirname(path));
+                  }, module);
+                  return cache[name] = module.exports;
+                } catch (err) {
+                  delete cache[name];
+                  throw err;
+                }
               } else {
                 throw 'module \\'' + name + '\\' not found';
               }
