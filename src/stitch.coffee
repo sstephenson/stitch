@@ -42,10 +42,10 @@ exports.Package = class Package
         (function(/*! Stitch !*/) {
           if (!this.#{@identifier}) {
             var modules = {}, cache = {}, require = function(name, root) {
-              var module = cache[name], fn, path = expand(root, name);
+              var module = cache[name], path = expand(root, name), fn;
               if (module) {
                 return module;
-              } else if ((fn = modules[path]) || (fn = modules[path = expand(path, './index')])) {
+              } else if (fn = modules[path] || modules[path = expand(path, './index')]) {
                 module = {id: name, exports: {}};
                 try {
                   cache[name] = module.exports;
@@ -69,10 +69,9 @@ exports.Package = class Package
               }
               for (var i = 0, length = parts.length; i < length; i++) {
                 part = parts[i];
-                if (part == '.' || part == '') {
-                } else if (part == '..') {
+                if (part == '..') {
                   results.pop();
-                } else {
+                } else if (part != '.' && part != '') {
                   results.push(part);
                 }
               }
@@ -81,7 +80,7 @@ exports.Package = class Package
               return path.split('/').slice(0, -1).join('/');
             };
             this.#{@identifier} = function(name) {
-              return require(name, '.');
+              return require(name, '');
             }
             this.#{@identifier}.define = function(bundle) {
               for (var key in bundle)
