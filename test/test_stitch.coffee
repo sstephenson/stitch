@@ -6,7 +6,7 @@ fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
-fixtureCount = 8
+fixtureCount = 11
 
 defaultOptions =
   identifier: "testRequire"
@@ -211,3 +211,18 @@ module.exports =
         test.same "additional/foo/bar.js", @testRequire("foo/bar").filename
         test.same "biz", @testRequire("foo/bar/baz").baz;
         test.done()
+
+  "relative require": (test) ->
+    test.expect 6
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      eval sources
+
+      relative = @testRequire("relative")
+      test.same "a", relative.a.a
+      test.same "b", relative.a.b
+      test.same "foo", relative.custom()
+      test.same "biz", relative.baz
+      test.same "BUZ", relative.buz
+      test.done()
