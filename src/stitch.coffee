@@ -19,11 +19,11 @@ catch err
 
 exports.Package = class Package
   constructor: (config) ->
-    @identifier = config.identifier or 'require'
-    @paths      = config.paths or ['lib']
+    @identifier = config.identifier ? 'require'
+    @paths      = config.paths ? ['lib']
     @compilers  = _.extend {}, defaultCompilers, config.compilers
 
-    @cache        = config.cache or true
+    @cache        = config.cache ? true
     @mtimeCache   = {}
     @compileCache = {}
 
@@ -32,23 +32,29 @@ exports.Package = class Package
       return callback err if err
 
       result = """
-        var #{@identifier} = (function(modules) {
-          var exportCache = {};
-          return function require(name) {
-            var module = exportCache[name];
-            var fn;
-            if (module) {
-              return module;
-            } else if (fn = modules[name] || fn = modules[name +"/index"]) {
-              module = { id: name, exports: {} };
-              fn(module.exports, require, module);
-              exportCache[name] = module.exports;
-              return module.exports;
-            } else {
-              throw 'module \\'' + name + '\\' not found';
-            }
+        (function(/*! Stitch !*/) {
+          if (!this.#{@identifier}) {
+            var modules = {}, cache = {}, require;
+            this.#{@identifier} = require = function(name) {
+              var module = cache[name], fn;
+              if (module) {
+                return module;
+              } else if ((fn = modules[name]) || (fn = modules[name + '/index'])) {
+                module = {id: name, exports: {}};
+                fn(module.exports, require, module);
+                cache[name] = module.exports;
+                return module.exports;
+              } else {
+                throw 'module \\'' + name + '\\' not found';
+              }
+            };
+            require.define = function(bundle) {
+              for (var key in bundle)
+                modules[key] = bundle[key];
+            };
           }
-        })({
+          return this.#{@identifier}.define;
+        }).call(this)({
       """
 
       index = 0

@@ -5,6 +5,7 @@ stitch = require "stitch"
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
+addlFixtures = fixtureRoot + "/additional"
 fixtureCount = 8
 
 defaultOptions =
@@ -13,8 +14,14 @@ defaultOptions =
 
 defaultPackage = stitch.createPackage defaultOptions
 
+additionalOptions =
+  identifier: "testRequire"
+  paths:      [addlFixtures]
+
+additionalPackage = stitch.createPackage additionalOptions
+
 alternateOptions =
-  paths: [altFixtures]
+  paths:      [altFixtures]
 
 alternatePackage = stitch.createPackage alternateOptions
 
@@ -111,7 +118,7 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      test.ok typeof testRequire is "function"
+      test.ok typeof @testRequire is "function"
       test.done()
 
   "compile module with custom exports": (test) ->
@@ -120,7 +127,7 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      result = testRequire("custom_exports")
+      result = @testRequire("custom_exports")
       test.ok typeof result is "function"
       test.same "foo", result()
       test.done()
@@ -131,7 +138,7 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      test.same "bar", testRequire("exported_property").foo
+      test.same "bar", @testRequire("exported_property").foo
       test.done()
 
   "compile module with requires": (test) ->
@@ -140,7 +147,7 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      module = testRequire("module")
+      module = @testRequire("module")
       test.same "bar", module.foo
       test.same "foo", module.bar()
       test.same "biz", module.baz
@@ -152,10 +159,10 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      module = testRequire("module")
+      module = @testRequire("module")
       test.ok !module.x
       module.x = "foo"
-      test.same "foo", testRequire("module").x
+      test.same "foo", @testRequire("module").x
       test.done()
 
   "look for module index if necessary": (test) ->
@@ -164,6 +171,43 @@ module.exports =
     defaultPackage.compile (err, sources) ->
       test.ok !err
       eval sources
-      buz= testRequire("foo/buz").buz
-      test.same buz,  "BUZ"
+      buz = @testRequire("foo/buz").buz
+      test.same buz, "BUZ"
       test.done()
+
+  "modules can be defined at runtime": (test) ->
+    test.expect 3
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      eval sources
+
+      raised = false
+      try
+        @testRequire("frob")
+      catch e
+        raised = true
+      test.ok raised
+
+      @testRequire.define
+        "frob": (exports, require, module) ->
+          exports.frob = require("foo/buz").buz
+
+      test.same "BUZ", @testRequire("frob").frob
+      test.done()
+
+  "multiple packages may share the same require namespace": (test) ->
+    test.expect 5
+
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      eval sources
+
+      additionalPackage.compile (err, sources) =>
+        test.ok !err
+        eval sources
+
+        test.same "hello", @testRequire("hello").hello
+        test.same "additional/foo/bar.js", @testRequire("foo/bar").filename
+        test.same "biz", @testRequire("foo/bar/baz").baz;
+        test.done()
