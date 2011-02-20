@@ -6,24 +6,27 @@ fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
+ecoFixtures  = fixtureRoot + "/eco"
 fixtureCount = 11
 
 defaultOptions =
   identifier: "testRequire"
   paths:      [fixtures]
-
 defaultPackage = stitch.createPackage defaultOptions
 
 additionalOptions =
   identifier: "testRequire"
   paths:      [addlFixtures]
-
 additionalPackage = stitch.createPackage additionalOptions
 
 alternateOptions =
   paths:      [altFixtures]
-
 alternatePackage = stitch.createPackage alternateOptions
+
+ecoOptions =
+  paths:      [ecoFixtures]
+ecoPackage = stitch.createPackage ecoOptions
+
 
 module.exports =
   "walk tree": (test) ->
@@ -226,3 +229,15 @@ module.exports =
       test.same "biz", relative.baz
       test.same "BUZ", relative.buz
       test.done()
+
+if stitch.compilers.eco
+  module.exports["eco compiler"] = (test) ->
+    test.expect 2
+    ecoPackage.compile (err, sources) ->
+      test.ok !err
+      eval sources
+
+      html = @require("hello.html")(name: "Sam").trim()
+      test.same "hello Sam!", html.split("\n").pop()
+      test.done()
+

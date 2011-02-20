@@ -4,15 +4,22 @@ fs    = require 'fs'
 
 {extname, join, normalize} = require 'path'
 
-defaultCompilers =
+exports.compilers = compilers =
   js: (module, filename) ->
     content = fs.readFileSync filename, 'utf8'
     module._compile content, filename
 
 try
   CoffeeScript = require 'coffee-script'
-  defaultCompilers.coffee = (module, filename) ->
+  compilers.coffee = (module, filename) ->
     content = CoffeeScript.compile fs.readFileSync filename, 'utf8'
+    module._compile content, filename
+catch err
+
+try
+  eco = require 'eco'
+  compilers.eco = (module, filename) ->
+    content = eco.compile fs.readFileSync filename, 'utf8'
     module._compile content, filename
 catch err
 
@@ -21,7 +28,7 @@ exports.Package = class Package
   constructor: (config) ->
     @identifier = config.identifier ? 'require'
     @paths      = config.paths ? ['lib']
-    @compilers  = _.extend {}, defaultCompilers, config.compilers
+    @compilers  = _.extend {}, compilers, config.compilers
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
