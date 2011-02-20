@@ -3,12 +3,20 @@ require.paths.unshift __dirname + '/lib'
 {print} = require 'sys'
 {spawn} = require 'child_process'
 
-task 'build', 'Build lib/ from src/', ->
+build = (callback) ->
   coffee = spawn 'coffee', ['-c', '-o', 'lib', 'src']
-  coffee.stdout.on 'data', (data) -> print data.toString()
+  coffee.stderr.on 'data', (data) ->
+    process.stderr.write data.toString()
+  coffee.stdout.on 'data', (data) ->
+    print data.toString()
+  coffee.on 'exit', (code) ->
+    callback?() if code is 0
+
+task 'build', 'Build lib/ from src/', ->
+  build()
 
 task 'test', 'Run tests', ->
-  invoke 'build'
-  process.chdir __dirname
-  {reporters} = require 'nodeunit'
-  reporters.default.run ['test']
+  build ->
+    process.chdir __dirname
+    {reporters} = require 'nodeunit'
+    reporters.default.run ['test']
