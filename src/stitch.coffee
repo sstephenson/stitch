@@ -110,7 +110,7 @@ exports.Package = class Package
           console.error "#{err.stack}"
           message = "" + err.stack
           res.writeHead 500, 'Content-Type': 'text/javascript'
-          res.end "throw #{JSON.stringify(message)}"
+          res.end "#{JSON.stringify(message)}"
         else
           res.writeHead 200, 'Content-Type': 'text/javascript'
           res.end source
@@ -154,7 +154,7 @@ exports.Package = class Package
         base = expandedPath + "/"
         if path.indexOf(base) is 0
           return callback null, path.slice base.length
-      callback "#{path} isn't in the require path"
+      callback new Error "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)
@@ -181,7 +181,7 @@ exports.Package = class Package
           err = new Error "can't compile #{path}\n#{err}"
         callback err
     else
-      callback "no compiler for '.#{extension}' files"
+      callback new Error "no compiler for '.#{extension}' files"
 
   walkTree: (directory, callback) ->
     fs.readdir directory, (err, files) =>
