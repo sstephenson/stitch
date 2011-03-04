@@ -35,7 +35,7 @@ exports.Package = class Package
     @compileCache = {}
 
   compile: (callback) ->
-    async.reduce @paths, {}, _.bind(@gatherSourcesFromPath, @), (err, sources) =>
+    @gatherSources (err, sources) =>
       return callback err if err
 
       result = """
@@ -103,6 +103,50 @@ exports.Package = class Package
 
       callback err, result
 
+  findRequires: (callback) ->
+    @gatherSources (err, sources) =>
+      requires = []
+      unless err
+        for path, {source} of sources
+          requires.push @findRequiresInSource(source)...
+      callback err, _.uniq requires
+
+  findRequiresInSource: (source) ->
+    {parser, uglify} = require 'uglify-js'
+    requires = []
+    ast      = parser.parse source
+    walker   = uglify.ast_walker()
+
+    isStringConcatenation = (expr) ->
+      if expr[0] is 'binary' and expr[1] is '+'
+        left  = expr[2]
+        right = expr[3]
+        if isStringConcatenation left
+          true
+        else if left[0] is 'string'
+          true
+        else if right[0] is 'string'
+          left[0] in ['dot', 'call']
+
+    stringFrom = (expr) ->
+      if expr[0] is 'binary' and expr[1] is '+'
+        stringFrom(expr[2]) + stringFrom(expr[3])
+      else if expr[0] is 'string'
+        expr[1]
+      else
+        '*'
+
+    walker.with_walkers
+      'call': (expr, args) ->
+        if expr[0] is 'name' and expr[1] is 'require' and args.length is 1
+          if args[0][0] is 'string'
+            requires.push args[0][1]
+          else if isStringConcatenation args[0]
+            requires.push stringFrom args[0]
+    , -> walker.walk ast
+
+    requires
+
   createServer: ->
     (req, res, next) =>
       @compile (err, source) ->
@@ -115,6 +159,9 @@ exports.Package = class Package
           res.writeHead 200, 'Content-Type': 'text/javascript'
           res.end source
 
+
+  gatherSources: (callback) ->
+    async.reduce @paths, {}, _.bind(@gatherSourcesFromPath, @), callback
 
   gatherSourcesFromPath: (sources, sourcePath, callback) ->
     fs.stat sourcePath, (err, stat) =>
