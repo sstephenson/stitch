@@ -159,16 +159,17 @@ exports.Package = class Package
       callback null, sources
 
   getRelativePath: (path, callback) ->
-    path = normalize path
-
-    async.map @paths, fs.realpath, (err, expandedPaths) ->
+    fs.realpath path, (err, sourcePath) =>
       return callback err if err
 
-      for expandedPath in expandedPaths
-        base = expandedPath + "/"
-        if path.indexOf(base) is 0
-          return callback null, path.slice base.length
-      callback "#{path} isn't in the require path"
+      async.map @paths, fs.realpath, (err, expandedPaths) ->
+        return callback err if err
+
+        for expandedPath in expandedPaths
+          base = expandedPath + "/"
+          if sourcePath.indexOf(base) is 0
+            return callback null, sourcePath.slice base.length
+        callback "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)

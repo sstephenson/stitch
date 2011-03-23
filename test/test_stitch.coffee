@@ -7,6 +7,7 @@ fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
+linkFixtures = fixtureRoot + "/link"
 fixtureCount = 15
 
 defaultOptions =
@@ -37,6 +38,11 @@ dependencyOptions =
     fixtureRoot + "/dependencies/backbone.js"
   ]
 dependencyPackage = stitch.createPackage dependencyOptions
+
+linkOptions =
+  identifier: "testRequire"
+  paths:      [linkFixtures]
+linkPackage = stitch.createPackage linkOptions
 
 
 load = (source, callback) ->
@@ -283,6 +289,14 @@ module.exports =
       test.same "// Underscore", lines[2]
       test.same "// Backbone", lines[4]
 
+      testRequire = load sources
+      test.ok testRequire("foo/bar/baz")
+      test.done()
+
+  "paths may be symlinks": (test) ->
+    test.expect 2
+    linkPackage.compile (err, sources) ->
+      test.ok !err
       testRequire = load sources
       test.ok testRequire("foo/bar/baz")
       test.done()
