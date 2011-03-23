@@ -28,6 +28,17 @@ ecoOptions =
   paths:      [ecoFixtures]
 ecoPackage = stitch.createPackage ecoOptions
 
+dependencyOptions =
+  identifier:   "testRequire"
+  paths:        [fixtures]
+  dependencies: [
+    fixtureRoot + "/dependencies/zepto.js"
+    fixtureRoot + "/dependencies/underscore.js"
+    fixtureRoot + "/dependencies/backbone.js"
+  ]
+dependencyPackage = stitch.createPackage dependencyOptions
+
+
 load = (source, callback) ->
   (-> eval source).call module = {}
   callback? (source) -> (-> eval source).call module
@@ -40,6 +51,7 @@ rescue = (callback) ->
   catch err
     rescued = true
   rescued
+
 
 module.exports =
   "walk tree": (test) ->
@@ -259,6 +271,20 @@ module.exports =
 
       test.ok rescue -> testRequire("circular/error")
       test.ok rescue -> testRequire("circular/error")
+      test.done()
+
+  "dependencies option concatenates files in order": (test) ->
+    test.expect 5
+    dependencyPackage.compile (err, sources) ->
+      test.ok !err
+      lines = sources.split("\n").slice(0, 5)
+
+      test.same "// Zepto", lines[0]
+      test.same "// Underscore", lines[2]
+      test.same "// Backbone", lines[4]
+
+      testRequire = load sources
+      test.ok testRequire("foo/bar/baz")
       test.done()
 
 if stitch.compilers.eco

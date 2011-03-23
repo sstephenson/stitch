@@ -26,15 +26,29 @@ catch err
 
 exports.Package = class Package
   constructor: (config) ->
-    @identifier = config.identifier ? 'require'
-    @paths      = config.paths ? ['lib']
-    @compilers  = _.extend {}, compilers, config.compilers
+    @identifier   = config.identifier ? 'require'
+    @paths        = config.paths ? ['lib']
+    @dependencies = config.dependencies ? []
+    @compilers    = _.extend {}, compilers, config.compilers
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
     @compileCache = {}
 
   compile: (callback) ->
+    async.parallel [
+      @compileDependencies
+      @compileSources
+    ], (err, parts) ->
+      if err then callback err
+      else callback null, parts.join("\n")
+
+  compileDependencies: (callback) =>
+    async.map @dependencies, fs.readFile, (err, dependencySources) =>
+      if err then callback err
+      else callback null, dependencySources.join("\n")
+
+  compileSources: (callback) =>
     async.reduce @paths, {}, _.bind(@gatherSourcesFromPath, @), (err, sources) =>
       return callback err if err
 
