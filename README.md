@@ -18,3 +18,19 @@ Bundle code in lib/ and vendor/ and serve it with [Express](http://expressjs.com
     var app = express.createServer();
     app.get('/application.js', package.createServer());
     app.listen(3000);
+
+Or build it to a file:
+
+    var stitch  = require('stitch');
+    var fs      = require('fs');
+
+    var package = stitch.createPackage({
+      paths: [__dirname + '/lib', __dirname + '/vendor']
+    });
+
+    package.compile(function (err, source){
+      fs.writeFile('package.js', source, function (err) {
+        if (err) throw err;
+        console.log('Compiled package.js');
+      })
+    })
