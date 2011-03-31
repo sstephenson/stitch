@@ -169,7 +169,7 @@ exports.Package = class Package
           base = expandedPath + "/"
           if sourcePath.indexOf(base) is 0
             return callback null, sourcePath.slice base.length
-        callback "#{path} isn't in the require path"
+        callback new Error "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)
@@ -196,7 +196,7 @@ exports.Package = class Package
           err = new Error "can't compile #{path}\n#{err}"
         callback err
     else
-      callback "no compiler for '.#{extension}' files"
+      callback new Error "no compiler for '.#{extension}' files"
 
   walkTree: (directory, callback) ->
     fs.readdir directory, (err, files) =>
