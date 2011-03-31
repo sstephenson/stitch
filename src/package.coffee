@@ -98,19 +98,6 @@ module.exports = class Package
 
       callback err, result
 
-  createServer: ->
-    (req, res, next) =>
-      @compile (err, source) ->
-        if err
-          console.error "#{err.stack}"
-          message = "" + err.stack
-          res.writeHead 500, 'Content-Type': 'text/javascript'
-          res.end "throw #{JSON.stringify(message)}"
-        else
-          res.writeHead 200, 'Content-Type': 'text/javascript'
-          res.end source
-
-
   gatherSourcesFromPath: (sources, sourcePath, callback) ->
     fs.stat sourcePath, (err, stat) =>
       return callback err if err
