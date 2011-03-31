@@ -1,7 +1,7 @@
-_         = require 'underscore'
-compilers = require './compilers'
-async     = require 'async'
-fs        = require 'fs'
+_      = require 'underscore'
+async  = require 'async'
+fs     = require 'fs'
+stitch = require '.'
 
 {extname, join, normalize} = require 'path'
 
@@ -13,7 +13,7 @@ module.exports = class Package
     @identifier   = config.identifier ? 'require'
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
-    @compilers    = _.extend {}, compilers, config.compilers
+    @extensions   = _.extend {}, require.extensions, stitch.extensions, config.extensions
     @cache        = config.cache ? true
 
   compile: (callback) ->
@@ -110,7 +110,7 @@ module.exports = class Package
         @gatherCompilableSource sources, sourcePath, callback
 
   gatherCompilableSource: (sources, path, callback) ->
-    if @compilers[extname(path).slice(1)]
+    if @extensions[extname(path)]
       @getRelativePath path, (err, relativePath) =>
         return callback err if err
 
@@ -140,11 +140,11 @@ module.exports = class Package
         callback new Error "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
-    extension = extname(path).slice(1)
+    extension = extname(path)
 
     if @cache and compileCache[path] and mtimeCache[path] is compileCache[path].mtime
       callback null, compileCache[path].source
-    else if compile = @compilers[extension]
+    else if compile = @extensions[extension]
       source = null
       mod =
         _compile: (content, filename) ->

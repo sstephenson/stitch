@@ -1,9 +1,14 @@
+try
+  require 'coffee-script'
+  require 'eco'
+catch err
+
 exports.Package = Package = require './package'
 
 exports.createPackage = createPackage = (config) ->
   new Package config
 
-exports.compilers = require './compilers'
+exports.extensions = {}
 
 exports.compile = (config, callback) ->
   createPackage(config).compile callback

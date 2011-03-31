@@ -120,8 +120,8 @@ module.exports =
     test.expect 1
 
     options = Object.create alternateOptions
-    options.compilers =
-      alert: (module, filename) ->
+    options.extensions =
+      ".alert": (module, filename) ->
         source = require('fs').readFileSync filename, 'utf8'
         source = "alert(#{sys.inspect source});"
         module._compile source, filename
@@ -301,7 +301,7 @@ module.exports =
       test.ok testRequire("foo/bar/baz")
       test.done()
 
-if stitch.compilers.eco
+if require.extensions[".eco"]
   module.exports["eco compiler"] = (test) ->
     test.expect 2
     ecoPackage.compile (err, sources) ->
