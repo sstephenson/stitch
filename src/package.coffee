@@ -5,16 +5,16 @@ fs        = require 'fs'
 
 {extname, join, normalize} = require 'path'
 
+mtimeCache   = {}
+compileCache = {}
+
 module.exports = class Package
   constructor: (config = {}) ->
     @identifier   = config.identifier ? 'require'
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
-
     @cache        = config.cache ? true
-    @mtimeCache   = {}
-    @compileCache = {}
 
   compile: (callback) ->
     async.parallel [
@@ -142,8 +142,8 @@ module.exports = class Package
   compileFile: (path, callback) ->
     extension = extname(path).slice(1)
 
-    if @cache and @compileCache[path] and @mtimeCache[path] is @compileCache[path].mtime
-      callback null, @compileCache[path].source
+    if @cache and compileCache[path] and mtimeCache[path] is compileCache[path].mtime
+      callback null, compileCache[path].source
     else if compile = @compilers[extension]
       source = null
       mod =
@@ -153,8 +153,8 @@ module.exports = class Package
       try
         compile mod, path
 
-        if @cache and mtime = @mtimeCache[path]
-          @compileCache[path] = {mtime, source}
+        if @cache and mtime = mtimeCache[path]
+          compileCache[path] = {mtime, source}
 
         callback null, source
       catch err
@@ -175,7 +175,7 @@ module.exports = class Package
         filename = join directory, file
 
         fs.stat filename, (err, stats) =>
-          @mtimeCache[filename] = stats?.mtime?.toString()
+          mtimeCache[filename] = stats?.mtime?.toString()
 
           if !err and stats.isDirectory()
             @walkTree filename, (err, filename) ->
