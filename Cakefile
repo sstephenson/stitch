@@ -1,5 +1,3 @@
-require.paths.unshift __dirname + '/lib'
-
 {print} = require 'sys'
 {spawn} = require 'child_process'
 

@@ -9,7 +9,7 @@
   { "type": "MIT"
   , "url": "http://github.com/sstephenson/stitch/raw/master/LICENSE"
   }]
-, "main": "./lib/stitch"
+, "main": "./lib/index"
 , "repository":
   { "type": "git"
   , "url": "http://github.com/sstephenson/stitch.git"

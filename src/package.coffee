@@ -1,31 +1,12 @@
-_     = require 'underscore'
-async = require 'async'
-fs    = require 'fs'
+_         = require 'underscore'
+compilers = require './compilers'
+async     = require 'async'
+fs        = require 'fs'
 
 {extname, join, normalize} = require 'path'
 
-exports.compilers = compilers =
-  js: (module, filename) ->
-    content = fs.readFileSync filename, 'utf8'
-    module._compile content, filename
-
-try
-  CoffeeScript = require 'coffee-script'
-  compilers.coffee = (module, filename) ->
-    content = CoffeeScript.compile fs.readFileSync filename, 'utf8'
-    module._compile content, filename
-catch err
-
-try
-  eco = require 'eco'
-  compilers.eco = (module, filename) ->
-    content = eco.compile fs.readFileSync filename, 'utf8'
-    module._compile content, filename
-catch err
-
-
-exports.Package = class Package
-  constructor: (config) ->
+module.exports = class Package
+  constructor: (config = {}) ->
     @identifier   = config.identifier ? 'require'
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
@@ -229,7 +210,3 @@ exports.Package = class Package
         files.push filename
       else
         callback err, files.sort()
-
-
-exports.createPackage = (config) ->
-  new Package config
