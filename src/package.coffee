@@ -1,12 +1,11 @@
 _      = require 'underscore'
 async  = require 'async'
 fs     = require 'fs'
+
 stitch = require '.'
+Module = require './module'
 
 {extname, join, normalize} = require 'path'
-
-mtimeCache   = {}
-compileCache = {}
 
 module.exports = class Package
   constructor: (config = {}) ->
@@ -14,7 +13,6 @@ module.exports = class Package
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @extensions   = _.extend {}, require.extensions, stitch.extensions, config.extensions
-    @cache        = config.cache ? true
 
   compile: (callback) ->
     async.parallel [
@@ -126,6 +124,11 @@ module.exports = class Package
     else
       callback null, sources
 
+  compileFile: (path, callback) ->
+    compiler = @extensions[extname(path)]
+    Module.load path, compiler, (err, mod) ->
+      callback err, mod?.source
+
   getRelativePath: (path, callback) ->
     fs.realpath path, (err, sourcePath) =>
       return callback err if err
@@ -139,33 +142,6 @@ module.exports = class Package
             return callback null, sourcePath.slice base.length
         callback new Error "#{path} isn't in the require path"
 
-  compileFile: (path, callback) ->
-    extension = extname(path)
-
-    if @cache and compileCache[path] and mtimeCache[path] is compileCache[path].mtime
-      callback null, compileCache[path].source
-    else if compile = @extensions[extension]
-      source = null
-      mod =
-        _compile: (content, filename) ->
-          source = content
-
-      try
-        compile mod, path
-
-        if @cache and mtime = mtimeCache[path]
-          compileCache[path] = {mtime, source}
-
-        callback null, source
-      catch err
-        if err instanceof Error
-          err.message = "can't compile #{path}\n#{err.message}"
-        else
-          err = new Error "can't compile #{path}\n#{err}"
-        callback err
-    else
-      callback new Error "no compiler for '.#{extension}' files"
-
   walkTree: (directory, callback) ->
     fs.readdir directory, (err, files) =>
       return callback err if err
@@ -175,8 +151,6 @@ module.exports = class Package
         filename = join directory, file
 
         fs.stat filename, (err, stats) =>
-          mtimeCache[filename] = stats?.mtime?.toString()
-
           if !err and stats.isDirectory()
             @walkTree filename, (err, filename) ->
               if filename
