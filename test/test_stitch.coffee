@@ -7,6 +7,7 @@ fixtures     = fixtureRoot + "/default"
 altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
+jadeFixtures = fixtureRoot + "/jade"
 linkFixtures = fixtureRoot + "/link"
 fixtureCount = 15
 
@@ -28,6 +29,11 @@ ecoOptions =
   identifier: "testRequire"
   paths:      [ecoFixtures]
 ecoPackage = stitch.createPackage ecoOptions
+
+jadeOptions =
+  identifier: "testRequire"
+  paths:      [jadeFixtures]
+jadePackage = stitch.createPackage jadeOptions
 
 dependencyOptions =
   identifier:   "testRequire"
@@ -312,3 +318,13 @@ if stitch.compilers.eco
       test.same "hello Sam!", html.split("\n").pop()
       test.done()
 
+if stitch.compilers.jade
+  module.exports["jade compiler"] = (test) ->
+    test.expect 2
+    jadePackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+
+      html = testRequire("hello.html")(name: "Sam").trim()
+      test.same "<!DOCTYPE html><html></html><body>hello Sam!</body>", html.split("\n").pop()
+      test.done()
