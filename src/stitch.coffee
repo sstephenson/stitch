@@ -23,6 +23,13 @@ try
     module._compile content, filename
 catch err
 
+try
+  jade = require 'jade'
+  compilers.jade = (module, filename) ->
+    content = "module.exports = #{jade.compile(fs.readFileSync filename, 'utf8')};"
+    module._compile content, filename
+catch err
+
 
 exports.Package = class Package
   constructor: (config) ->
