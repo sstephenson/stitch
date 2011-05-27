@@ -2,12 +2,13 @@ sys = require "sys"
 fs  = require "fs"
 stitch = require "stitch"
 
-fixtureRoot  = __dirname + "/fixtures"
-fixtures     = fixtureRoot + "/default"
-altFixtures  = fixtureRoot + "/alternate"
-addlFixtures = fixtureRoot + "/additional"
-ecoFixtures  = fixtureRoot + "/eco"
-linkFixtures = fixtureRoot + "/link"
+fixtureRoot      = __dirname + "/fixtures"
+fixtures         = fixtureRoot + "/default"
+altFixtures      = fixtureRoot + "/alternate"
+addlFixtures     = fixtureRoot + "/additional"
+ecoFixtures      = fixtureRoot + "/eco"
+linkFixtures     = fixtureRoot + "/link"
+compressFixtures = fixtureRoot + "/compress"
 fixtureCount = 15
 
 defaultOptions =
@@ -43,6 +44,12 @@ linkOptions =
   identifier: "testRequire"
   paths:      [linkFixtures]
 linkPackage = stitch.createPackage linkOptions
+
+compressOptions =
+  identifier: "testRequire"
+  paths:      [compressFixtures]
+  compress:   true
+compressPackage = stitch.createPackage compressOptions
 
 
 load = (source, callback) ->
@@ -185,6 +192,14 @@ module.exports =
       test.same "bar", module.foo
       test.same "foo", module.bar()
       test.same "biz", module.baz
+      test.done()
+
+  "compile and compress with jsmin": (test) ->
+    test.expect 2
+
+    compressPackage.compile (err, sources) ->
+      test.ok !err
+      test.ok sources.indexOf('function(){console.log("hello, world!");}') > 0
       test.done()
 
   "runtime require only loads files once": (test) ->

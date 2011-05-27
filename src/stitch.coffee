@@ -23,6 +23,10 @@ try
     module._compile content, filename
 catch err
 
+try
+  jsmin = require('jsmin').jsmin
+catch err
+
 
 exports.Package = class Package
   constructor: (config) ->
@@ -30,6 +34,7 @@ exports.Package = class Package
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
+    @compress     = (config.compress and jsmin) or false
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
@@ -39,9 +44,12 @@ exports.Package = class Package
     async.parallel [
       @compileDependencies
       @compileSources
-    ], (err, parts) ->
+    ], (err, parts) =>
       if err then callback err
-      else callback null, parts.join("\n")
+      else
+        sources = parts.join("\n")
+        sources = jsmin sources if @compress
+        callback null, sources
 
   compileDependencies: (callback) =>
     async.map @dependencies, fs.readFile, (err, dependencySources) =>
