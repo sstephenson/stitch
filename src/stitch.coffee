@@ -18,9 +18,14 @@ catch err
 
 try
   eco = require 'eco'
-  compilers.eco = (module, filename) ->
-    content = eco.compile fs.readFileSync filename, 'utf8'
-    module._compile content, filename
+  if eco.precompile
+    compilers.eco = (module, filename) ->
+      content = eco.precompile fs.readFileSync filename, 'utf8'
+      module._compile "module.exports = #{content}", filename
+  else
+    compilers.eco = (module, filename) ->
+      content = eco.compile fs.readFileSync filename, 'utf8'
+      module._compile content, filename
 catch err
 
 
