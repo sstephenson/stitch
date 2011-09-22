@@ -67,7 +67,7 @@ exports.Package = class Package
               } else if (fn = modules[path] || modules[path = expand(path, './index')]) {
                 module = {id: name, exports: {}};
                 try {
-                  cache[name] = module.exports;
+                  cache[path] = cache[name] = module.exports;
                   fn(module.exports, function(name) {
                     return require(name, dirname(path));
                   }, module);
