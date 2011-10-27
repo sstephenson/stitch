@@ -49,7 +49,7 @@ exports.Package = class Package
       else callback null, parts.join("\n")
 
   compileDependencies: (callback) =>
-    async.map @dependencies, fs.readFile, (err, dependencySources) =>
+    async.map @dependencies, @compileFile, (err, dependencySources) =>
       if err then callback err
       else callback null, dependencySources.join("\n")
 
@@ -176,7 +176,7 @@ exports.Package = class Package
             return callback null, sourcePath.slice base.length
         callback new Error "#{path} isn't in the require path"
 
-  compileFile: (path, callback) ->
+  compileFile: (path, callback) =>
     extension = extname(path).slice(1)
 
     if @cache and @compileCache[path] and @mtimeCache[path] is @compileCache[path].mtime
