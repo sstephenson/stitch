@@ -171,7 +171,7 @@ exports.Package = class Package
         return callback err if err
 
         for expandedPath in expandedPaths
-          base = expandedPath + "/"
+          base = expandedPath + join('_', '_')[1]
           if sourcePath.indexOf(base) is 0
             return callback null, sourcePath.slice base.length
         callback new Error "#{path} isn't in the require path"
