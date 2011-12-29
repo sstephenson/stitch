@@ -1,6 +1,6 @@
 sys = require "sys"
 fs  = require "fs"
-stitch = require "stitch"
+stitch = require "../."
 
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
@@ -8,7 +8,7 @@ altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
 linkFixtures = fixtureRoot + "/link"
-fixtureCount = 15
+fixtureCount = 17
 
 defaultOptions =
   identifier: "testRequire"
@@ -256,16 +256,21 @@ module.exports =
       test.done()
 
   "circular require": (test) ->
-    test.expect 4
+    test.expect 7
 
     defaultPackage.compile (err, sources) ->
       test.ok !err
       testRequire = load sources
 
       circular = testRequire("circular")
-      test.same "a", circular.a.a()
-      test.same "a", circular.b.b()
-      test.same "a", circular.a.b()
+      test.same "a", circular.using_exports_a.a()
+      test.same "a", circular.using_exports_b.b()
+      test.same "a", circular.using_exports_a.b()
+
+      test.same "a", circular.using_module_exports_a.a()
+      test.same "a", circular.using_module_exports_b.b()
+      test.same "a", circular.using_module_exports_a.b()
+
       test.done()
 
   "errors at require time don't leave behind a partially loaded cache": (test) ->
