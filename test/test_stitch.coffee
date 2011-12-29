@@ -1,6 +1,6 @@
 sys = require "sys"
 fs  = require "fs"
-stitch = require "stitch"
+stitch = require "../."
 
 fixtureRoot  = __dirname + "/fixtures"
 fixtures     = fixtureRoot + "/default"
