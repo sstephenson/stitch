@@ -1,4 +1,4 @@
-sys = require "sys"
+sys = require "util"
 fs  = require "fs"
 stitch = require "../."
 
