@@ -8,7 +8,7 @@ altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
 linkFixtures = fixtureRoot + "/link"
-fixtureCount = 17
+fixtureCount = 18
 
 defaultOptions =
   identifier: "testRequire"

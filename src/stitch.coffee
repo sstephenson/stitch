@@ -114,7 +114,7 @@ exports.Package = class Package
       for name, {filename, source} of sources
         result += if index++ is 0 then "" else ", "
         result += JSON.stringify name
-        result += ": function(exports, require, module) {#{source}}"
+        result += ": function(exports, require, module) {#{source}\n}"
 
       result += """
         });\n
