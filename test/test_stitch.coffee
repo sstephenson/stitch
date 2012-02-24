@@ -299,12 +299,17 @@ module.exports =
       test.done()
 
   "paths may be symlinks": (test) ->
-    test.expect 2
-    linkPackage.compile (err, sources) ->
-      test.ok !err
-      testRequire = load sources
-      test.ok testRequire("foo/bar/baz")
+    if process.platform == 'win32'
+      test.expect 1
+      test.ok true, "Windows doesn't have symlinks"
       test.done()
+    else
+      test.expect 2
+      linkPackage.compile (err, sources) ->
+        test.ok !err
+        testRequire = load sources
+        test.ok testRequire("foo/bar/baz")
+        test.done()
 
 if stitch.compilers.eco
   module.exports["eco compiler"] = (test) ->
