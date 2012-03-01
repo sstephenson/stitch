@@ -1,6 +1,6 @@
-requireCount = 0
+derp = 0
 
 module.exports = {
-  count: (-> requireCount )
-  bump: (-> requireCount++)
+  count: (-> derp )
+  bump: (-> derp++)
 }
