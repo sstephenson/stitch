@@ -88,7 +88,7 @@ module.exports =
     test.expect 1
 
     dirname = fixtures + "/empty"
-    fs.mkdirSync dirname, 0755
+    fs.mkdirSync dirname, 0o0755
     defaultPackage.getFilesInTree dirname, (err, files) ->
       test.ok !err
       fs.rmdirSync dirname
@@ -125,9 +125,9 @@ module.exports =
         source = require('fs').readFileSync filename, 'utf8'
         source = "alert(#{sys.inspect source});"
         module._compile source, filename
-    package = stitch.createPackage options
+    stitchPackage = stitch.createPackage options
 
-    package.compileFile altFixtures + "/hello.alert", (err, source) ->
+    stitchPackage.compileFile altFixtures + "/hello.alert", (err, source) ->
       test.same "alert('hello world\\n');", source
       test.done()
 
