@@ -8,7 +8,7 @@ altFixtures  = fixtureRoot + "/alternate"
 addlFixtures = fixtureRoot + "/additional"
 ecoFixtures  = fixtureRoot + "/eco"
 linkFixtures = fixtureRoot + "/link"
-fixtureCount = 17
+fixtureCount = 19
 
 defaultOptions =
   identifier: "testRequire"
@@ -208,6 +208,39 @@ module.exports =
       buz = testRequire("foo/buz").buz
       test.same buz, "BUZ"
       test.done()
+
+  "pulls module from cache": (test) ->
+    test.expect 5
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+      faz = testRequire("foo/fuz/faz")
+      test.same 0, faz.count()
+      faz.bump()
+      test.same 1, faz.count()
+      # Reload
+      faz = testRequire("foo/fuz/faz")
+      test.same 1, faz.count()
+      faz.bump()
+      test.same 2, faz.count()
+      test.done()
+
+  "pulls module from cache when module index": (test) ->
+    test.expect 5
+    defaultPackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+      faz = testRequire("foo/fuz")
+      test.same 0, faz.count()
+      faz.bump()
+      test.same 1, faz.count()
+      # Reload
+      faz = testRequire("foo/fuz")
+      test.same 1, faz.count()
+      faz.bump()
+      test.same 2, faz.count()
+      test.done()
+
 
   "modules can be defined at runtime": (test) ->
     test.expect 3
