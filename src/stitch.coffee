@@ -35,6 +35,7 @@ exports.Package = class Package
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
+    @excludes     = config.excludes ? []
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
@@ -208,8 +209,8 @@ exports.Package = class Package
       return callback err if err
 
       async.forEach files, (file, next) =>
-        return next() if file.match /^\./
         filename = join directory, file
+        return next() if (filename in @excludes) or file.match /^\./
 
         fs.stat filename, (err, stats) =>
           @mtimeCache[filename] = stats?.mtime?.toString()
