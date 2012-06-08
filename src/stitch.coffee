@@ -35,6 +35,7 @@ exports.Package = class Package
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
+    @ignore       = config.ignore ? []
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
@@ -210,7 +211,11 @@ exports.Package = class Package
       async.forEach files, (file, next) =>
         return next() if file.match /^\./
         filename = join directory, file
-
+        
+        for k, ignore of @ignore
+          if ignore.test filename
+            return next()
+        
         fs.stat filename, (err, stats) =>
           @mtimeCache[filename] = stats?.mtime?.toString()
 

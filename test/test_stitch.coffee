@@ -2,17 +2,19 @@ sys = require "util"
 fs  = require "fs"
 stitch = require "../."
 
-fixtureRoot  = __dirname + "/fixtures"
-fixtures     = fixtureRoot + "/default"
-altFixtures  = fixtureRoot + "/alternate"
-addlFixtures = fixtureRoot + "/additional"
-ecoFixtures  = fixtureRoot + "/eco"
-linkFixtures = fixtureRoot + "/link"
-fixtureCount = 17
+fixtureRoot    = __dirname + "/fixtures"
+fixtures       = fixtureRoot + "/default"
+altFixtures    = fixtureRoot + "/alternate"
+addlFixtures   = fixtureRoot + "/additional"
+ecoFixtures    = fixtureRoot + "/eco"
+linkFixtures   = fixtureRoot + "/link"
+ignoreFixtures = fixtureRoot + '/ignore'
+fixtureCount   = 17
 
 defaultOptions =
   identifier: "testRequire"
   paths:      [fixtures]
+  ignore:     []
 defaultPackage = stitch.createPackage defaultOptions
 
 additionalOptions =
@@ -38,6 +40,13 @@ dependencyOptions =
     fixtureRoot + "/dependencies/backbone.js"
   ]
 dependencyPackage = stitch.createPackage dependencyOptions
+
+ignoreOptions =
+  identifier: "testRequire"
+  paths:      [ignoreFixtures]
+  ignore:     [/\/ignore_dir\//]
+ignorePackage = stitch.createPackage ignoreOptions
+ignoreFixtureCount = 2
 
 linkOptions =
   identifier: "testRequire"
@@ -88,7 +97,7 @@ module.exports =
     test.expect 1
 
     dirname = fixtures + "/empty"
-    fs.mkdirSync dirname, 0755
+    fs.mkdirSync dirname, 0o0755
     defaultPackage.getFilesInTree dirname, (err, files) ->
       test.ok !err
       fs.rmdirSync dirname
@@ -125,9 +134,9 @@ module.exports =
         source = require('fs').readFileSync filename, 'utf8'
         source = "alert(#{sys.inspect source});"
         module._compile source, filename
-    package = stitch.createPackage options
+    stitchPackage = stitch.createPackage options
 
-    package.compileFile altFixtures + "/hello.alert", (err, source) ->
+    stitchPackage.compileFile altFixtures + "/hello.alert", (err, source) ->
       test.same "alert('hello world\\n');", source
       test.done()
 
@@ -304,6 +313,23 @@ module.exports =
       test.ok !err
       testRequire = load sources
       test.ok testRequire("foo/bar/baz")
+      test.done()
+  
+  "ignore - walk tree": (test) ->
+    test.expect ignoreFixtureCount
+
+    ignorePackage.walkTree ignoreFixtures, (err, file) ->
+      if file
+        test.ok file
+      else
+        test.done()
+    
+  "ignore - get files in tree": (test) ->
+    test.expect 2
+
+    ignorePackage.getFilesInTree ignoreFixtures, (err, files) ->
+      test.ok !err
+      test.same ignoreFixtureCount, files.length
       test.done()
 
 if stitch.compilers.eco
