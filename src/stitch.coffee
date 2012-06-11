@@ -28,6 +28,7 @@ try
       module._compile content, filename
 catch err
 
+isWindows = process.platform is "win32"
 
 exports.Package = class Package
   constructor: (config) ->
@@ -35,6 +36,7 @@ exports.Package = class Package
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
+    @excludes     = config.excludes ? []
 
     @cache        = config.cache ? true
     @mtimeCache   = {}
@@ -171,9 +173,11 @@ exports.Package = class Package
         return callback err if err
 
         for expandedPath in expandedPaths
-          base = expandedPath + "/"
+          base = expandedPath + (if isWindows then "\\" else "/")
           if sourcePath.indexOf(base) is 0
-            return callback null, sourcePath.slice base.length
+            sp = sourcePath.slice base.length
+            if isWindows then sp = sp.replace /\\/g, "/"    #replace backslashes with forward slashes
+            return callback null,sp
         callback new Error "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
@@ -208,8 +212,8 @@ exports.Package = class Package
       return callback err if err
 
       async.forEach files, (file, next) =>
-        return next() if file.match /^\./
         filename = join directory, file
+        return next() if (filename in @excludes) or file.match /^\./
 
         fs.stat filename, (err, stats) =>
           @mtimeCache[filename] = stats?.mtime?.toString()
