@@ -28,6 +28,7 @@ try
       module._compile content, filename
 catch err
 
+isWindows = process.platform is "win32"
 
 exports.Package = class Package
   constructor: (config) ->
@@ -172,9 +173,11 @@ exports.Package = class Package
         return callback err if err
 
         for expandedPath in expandedPaths
-          base = expandedPath + (if process.platform is "win32" then "\\" else "/")
+          base = expandedPath + (if isWindows then "\\" else "/")
           if sourcePath.indexOf(base) is 0
-            return callback null, sourcePath.slice base.length
+            sp = sourcePath.slice base.length
+            if isWindows then sp = sp.replace /\\/g, "/"    #replace backslashes with forward slashes
+            return callback null,sp
         callback new Error "#{path} isn't in the require path"
 
   compileFile: (path, callback) ->
