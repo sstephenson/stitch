@@ -28,6 +28,8 @@ try
       module._compile content, filename
 catch err
 
+sep = if process.platform == 'win32' then '\\' else '/'
+
 
 exports.Package = class Package
   constructor: (config) ->
@@ -171,7 +173,7 @@ exports.Package = class Package
         return callback err if err
 
         for expandedPath in expandedPaths
-          base = expandedPath + "/"
+          base = expandedPath + sep
           if sourcePath.indexOf(base) is 0
             return callback null, sourcePath.slice base.length
         callback new Error "#{path} isn't in the require path"
