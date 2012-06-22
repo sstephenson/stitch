@@ -28,7 +28,8 @@ try
       module._compile content, filename
 catch err
 
-sep = if process.platform == 'win32' then '\\' else '/'
+isWindows = process.platform == 'win32'
+sep = if isWindows then '\\' else '/'
 
 
 exports.Package = class Package
@@ -115,7 +116,7 @@ exports.Package = class Package
       index = 0
       for name, {filename, source} of sources
         result += if index++ is 0 then "" else ", "
-        result += JSON.stringify name
+        result += if isWindows then JSON.stringify(name.replace(/\\/g, '/')) else name
         result += ": function(exports, require, module) {#{source}}"
 
       result += """
