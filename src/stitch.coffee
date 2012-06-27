@@ -28,11 +28,13 @@ try
       module._compile content, filename
 catch err
 
+sep = if process.platform == 'win32' then '\\' else '/'
+
 
 exports.Package = class Package
   constructor: (config) ->
     @identifier   = config.identifier ? 'require'
-    @paths        = config.paths ? ['lib']
+    @paths        = config.paths.map(normalize) ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
 
@@ -61,6 +63,7 @@ exports.Package = class Package
         (function(/*! Stitch !*/) {
           if (!this.#{@identifier}) {
             var modules = {}, cache = {}, require = function(name, root) {
+              name = name.replace(/\\\\/g, '/');
               var path = expand(root, name), module = cache[path], fn;
               if (module) {
                 return module.exports;
@@ -155,7 +158,7 @@ exports.Package = class Package
           if err then callback err
           else
             extension = extname relativePath
-            key       = relativePath.slice(0, -extension.length)
+            key       = relativePath.slice(0, -extension.length).replace(/\\/g, '/')
             sources[key] =
               filename: relativePath
               source:   source
@@ -171,7 +174,7 @@ exports.Package = class Package
         return callback err if err
 
         for expandedPath in expandedPaths
-          base = expandedPath + "/"
+          base = expandedPath + sep
           if sourcePath.indexOf(base) is 0
             return callback null, sourcePath.slice base.length
         callback new Error "#{path} isn't in the require path"
