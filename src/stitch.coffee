@@ -28,14 +28,13 @@ try
       module._compile content, filename
 catch err
 
-isWindows = process.platform == 'win32'
-sep = if isWindows then '\\' else '/'
+sep = if process.platform == 'win32' then '\\' else '/'
 
 
 exports.Package = class Package
   constructor: (config) ->
     @identifier   = config.identifier ? 'require'
-    @paths        = config.paths ? ['lib']
+    @paths        = config.paths.map(normalize) ? ['lib']
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
 
@@ -64,6 +63,7 @@ exports.Package = class Package
         (function(/*! Stitch !*/) {
           if (!this.#{@identifier}) {
             var modules = {}, cache = {}, require = function(name, root) {
+              name = name.replace(/\\\\/g, '/');
               var path = expand(root, name), module = cache[path], fn;
               if (module) {
                 return module.exports;
@@ -116,7 +116,7 @@ exports.Package = class Package
       index = 0
       for name, {filename, source} of sources
         result += if index++ is 0 then "" else ", "
-        result += if isWindows then JSON.stringify(name.replace(/\\/g, '/')) else name
+        result += JSON.stringify name
         result += ": function(exports, require, module) {#{source}}"
 
       result += """
@@ -158,7 +158,7 @@ exports.Package = class Package
           if err then callback err
           else
             extension = extname relativePath
-            key       = relativePath.slice(0, -extension.length)
+            key       = relativePath.slice(0, -extension.length).replace(/\\/g, '/')
             sources[key] =
               filename: relativePath
               source:   source
