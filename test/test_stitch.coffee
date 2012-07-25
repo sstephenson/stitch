@@ -88,7 +88,7 @@ module.exports =
     test.expect 1
 
     dirname = fixtures + "/empty"
-    fs.mkdirSync dirname, 0755
+    fs.mkdirSync dirname, 0o0755
     defaultPackage.getFilesInTree dirname, (err, files) ->
       test.ok !err
       fs.rmdirSync dirname
