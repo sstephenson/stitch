@@ -125,9 +125,9 @@ module.exports =
         source = require('fs').readFileSync filename, 'utf8'
         source = "alert(#{sys.inspect source});"
         module._compile source, filename
-    package = stitch.createPackage options
+    pkg = stitch.createPackage options
 
-    package.compileFile altFixtures + "/hello.alert", (err, source) ->
+    pkg.compileFile altFixtures + "/hello.alert", (err, source) ->
       test.same "alert('hello world\\n');", source
       test.done()
 
