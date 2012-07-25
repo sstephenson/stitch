@@ -10,6 +10,9 @@ ecoFixtures  = fixtureRoot + "/eco"
 linkFixtures = fixtureRoot + "/link"
 fixtureCount = 17
 
+filteredRoot = fixtureRoot + "/filtered"
+filteredPath = fixtureRoot + "/filtered/models,website"
+
 defaultOptions =
   identifier: "testRequire"
   paths:      [fixtures]
@@ -44,6 +47,11 @@ linkOptions =
   paths:      [linkFixtures]
 linkPackage = stitch.createPackage linkOptions
 
+filterOptions =
+  identifier: "testRequire"
+  paths:      [filteredPath]
+filteredPackage = stitch.createPackage filterOptions
+
 
 load = (source, callback) ->
   (-> eval source).call module = {}
@@ -64,6 +72,15 @@ module.exports =
     test.expect fixtureCount
 
     defaultPackage.walkTree fixtures, (err, file) ->
+      if file
+        test.ok file
+      else
+        test.done()
+
+  "walk filtered tree": (test) ->
+    test.expect 2
+
+    filteredPackage.walkTree filteredRoot, (err, file) ->
       if file
         test.ok file
       else
