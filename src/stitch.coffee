@@ -2,7 +2,7 @@ _     = require 'underscore'
 async = require 'async'
 fs    = require 'fs'
 
-{extname, join, normalize} = require 'path'
+{basename, dirname, extname, join, normalize} = require 'path'
 
 exports.compilers = compilers =
   js: (module, filename) ->
@@ -32,7 +32,7 @@ catch err
 exports.Package = class Package
   constructor: (config) ->
     @identifier   = config.identifier ? 'require'
-    @paths        = config.paths ? ['lib']
+    @paths        = (@setupFilterFor(path) or path for path in (config.paths ? ['lib']))
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
 
@@ -208,9 +208,15 @@ exports.Package = class Package
       return callback err if err
 
       async.forEach files, (file, next) =>
+        # Skip hidden files.
         return next() if file.match /^\./
+        
+        # Get the full path to the file.
         filename = join directory, file
 
+        # Screen files in filtered directories. Skip the file if the filter says `no`. 
+        return next() if @filtered[directory] and @filtered[directory](filename) is no
+          
         fs.stat filename, (err, stats) =>
           @mtimeCache[filename] = stats?.mtime?.toString()
 
@@ -234,6 +240,17 @@ exports.Package = class Package
         files.push filename
       else
         callback err, files.sort()
+
+  setupFilterFor: (path) ->
+    @filtered ?= {}
+    if /,/.test basename(path)
+      suffixes  = basename(path).split(",")
+      directory = dirname(path)
+      pattern   = new RegExp "^#{directory}/(#{suffixes.join('|')})"
+      @filtered[directory] = (filename) -> pattern.test filename
+      directory
+    else
+      false
 
 
 exports.createPackage = (config) ->
