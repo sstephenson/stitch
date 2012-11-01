@@ -34,3 +34,20 @@ Or build it to a file:
         console.log('Compiled package.js');
       })
     })
+
+
+Define a filtered path if you need to exclude some subdirectories under a particular path.
+Filtered paths end with a comma separated list of subdirectories that should be included in the bundle.
+For example:
+
+    var package = stitch.createPackage({
+      paths: ['/path/to/app/models,views,routers']
+    });
+
+... instructs Stitch to include code from:
+
+- /path/to/app/models
+- /path/to/app/views
+- /path/to/app/routers
+
+Code in other subdirectories of /path/to/app will be excluded.
