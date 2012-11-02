@@ -2,7 +2,7 @@ _     = require 'underscore'
 async = require 'async'
 fs    = require 'fs'
 
-{basename, dirname, extname, join, normalize} = require 'path'
+{basename, dirname, extname, join, normalize, sep} = require 'path'
 
 exports.compilers = compilers =
   js: (module, filename) ->
@@ -32,6 +32,7 @@ catch err
 exports.Package = class Package
   constructor: (config) ->
     @identifier   = config.identifier ? 'require'
+    @filtered     = {}
     @paths        = (@setupFilterFor(path) or path for path in (config.paths ? ['lib']))
     @dependencies = config.dependencies ? []
     @compilers    = _.extend {}, compilers, config.compilers
@@ -242,15 +243,23 @@ exports.Package = class Package
         callback err, files.sort()
 
   setupFilterFor: (path) ->
-    @filtered ?= {}
-    if /,/.test basename(path)
-      suffixes  = basename(path).split(",")
+    if @definesFilter path
       directory = dirname(path)
-      pattern   = new RegExp "^#{directory}/(#{suffixes.join('|')})"
+      subdirectories = basename(path).split(",")
+      escapedDirectoryParts = (@escapePatternMatchCharacters name for name in directory.split(sep))
+      escapedSubdirectories = (@escapePatternMatchCharacters name for name in subdirectories)
+      pattern = new RegExp "^#{escapedDirectoryParts.join(sep)}#{sep}(#{escapedSubdirectories.join('|')})"
       @filtered[directory] = (filename) -> pattern.test filename
       directory
     else
       false
+
+  # If the last part of the path contains `,` characters then it is defining a filter.
+  definesFilter: (path) ->
+    /,/.test basename(path)
+
+  escapePatternMatchCharacters: (string) ->
+    string.replace /([.*+?^=!:${}()|[\]\/\\])/g, "\\$1"
 
 
 exports.createPackage = (config) ->

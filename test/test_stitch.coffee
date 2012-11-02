@@ -52,6 +52,12 @@ filterOptions =
   paths:      [filteredPath]
 filteredPackage = stitch.createPackage filterOptions
 
+filteredRootWithPatternMatchChars = fixtureRoot + "/filtered+pattern+match+characters"
+filteredPathWithPatternMatchChars = fixtureRoot + "/filtered+pattern+match+characters/models,$"
+filteredPackageWithPatternMatchChars = stitch.createPackage
+  identifier: "testRequire"
+  paths:      [filteredPathWithPatternMatchChars]
+
 
 load = (source, callback) ->
   (-> eval source).call module = {}
@@ -81,6 +87,15 @@ module.exports =
     test.expect 2
 
     filteredPackage.walkTree filteredRoot, (err, file) ->
+      if file
+        test.ok file
+      else
+        test.done()
+
+  "walk filtered tree that has pattern match characters in filenames": (test) ->
+    test.expect 2
+
+    filteredPackageWithPatternMatchChars.walkTree filteredRootWithPatternMatchChars, (err, file) ->
       if file
         test.ok file
       else
