@@ -17,6 +17,13 @@ try
 catch err
 
 try
+  PogoScript = require 'pogo'
+  compilers.pogo = (module, filename) ->
+	content = PogoScript.compile(fs.readFileSync(filename, 'utf8'))
+	module._compile(content, filename)
+catch err
+
+try
   eco = require 'eco'
   if eco.precompile
     compilers.eco = (module, filename) ->
