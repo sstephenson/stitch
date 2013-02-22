@@ -4,7 +4,7 @@
   [ "Josh Peek"
   , "Sam Stephenson"
   ]
-, "version": "0.3.3"
+, "version": "0.3.4"
 , "licenses": [
   { "type": "MIT"
   , "url": "http://github.com/sstephenson/stitch/raw/master/LICENSE"
