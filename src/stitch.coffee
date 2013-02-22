@@ -105,7 +105,7 @@ exports.Package = class Package
               for (var key in bundle) {
                 modules[key] = bundle[key];
                 var ext = key.split('.').pop();
-                if (ext.indexOf('/') === -1)
+                if (ext.indexOf('/') === -1 && ext.length < key.length)
                   modules[key.slice(0,-ext.length - 1)] = bundle[key];
               }
             };
