@@ -102,8 +102,12 @@ exports.Package = class Package
               return require(name, '');
             }
             this.#{@identifier}.define = function(bundle) {
-              for (var key in bundle)
+              for (var key in bundle) {
                 modules[key] = bundle[key];
+                var ext = key.split('.').pop();
+                if (ext.indexOf('/') === -1)
+                  modules[key.slice(0,-ext.length - 1)] = bundle[key];
+              }
             };
           }
           return this.#{@identifier}.define;
@@ -154,8 +158,7 @@ exports.Package = class Package
         @compileFile path, (err, source) ->
           if err then callback err
           else
-            extension = extname relativePath
-            key       = relativePath.slice(0, -extension.length)
+            key = relativePath
             sources[key] =
               filename: relativePath
               source:   source

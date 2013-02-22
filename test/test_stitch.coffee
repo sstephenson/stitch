@@ -306,6 +306,15 @@ module.exports =
       test.ok testRequire("foo/bar/baz")
       test.done()
 
+  "require with .js extension": (test) ->
+    test.expect 3
+    additionalPackage.compile (err, sources) ->
+      test.ok !err
+      testRequire = load sources
+      test.ok testRequire("foo/bar.js")
+      test.ok testRequire("hello.js")
+      test.done()
+
 if stitch.compilers.eco
   module.exports["eco compiler"] = (test) ->
     test.expect 2
