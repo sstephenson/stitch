@@ -61,7 +61,7 @@ exports.Package = class Package
         (function(/*! Stitch !*/) {
           if (!this.#{@identifier}) {
             var modules = {}, cache = {}, require = function(name, root) {
-              var path = expand(root, name), module = cache[path], fn;
+              var path = expand(root, name), module = cache[path] || cache[expand(path, './index')], fn;
               if (module) {
                 return module.exports;
               } else if (fn = modules[path] || modules[path = expand(path, './index')]) {
