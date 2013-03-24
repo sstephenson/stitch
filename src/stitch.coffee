@@ -68,9 +68,9 @@ exports.Package = class Package
                 module = {id: path, exports: {}};
                 try {
                   cache[path] = module;
-                  fn(module.exports, function(name) {
+                  fn.apply(module.exports, [module.exports, function(name) {
                     return require(name, dirname(path));
-                  }, module);
+                  }, module]);
                   return module.exports;
                 } catch (err) {
                   delete cache[path];
