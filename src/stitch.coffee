@@ -32,6 +32,7 @@ isWindows = process.platform is "win32"
 
 exports.Package = class Package
   constructor: (config) ->
+    @rootModuleName = config.rootModuleName
     @identifier   = config.identifier ? 'require'
     @paths        = config.paths ? ['lib']
     @dependencies = config.dependencies ? []
@@ -61,54 +62,69 @@ exports.Package = class Package
 
       result = """
         (function(/*! Stitch !*/) {
-          if (!this.#{@identifier}) {
-            var modules = {}, cache = {}, require = function(name, root) {
-              var path = expand(root, name), module = cache[path], fn;
-              if (module) {
+
+          var modules = {}, cache = {}, req = function(name, root) {
+            var path = expand(root, name), module = cache[path], fn;
+            if (module) {
+              return module.exports;
+            } else if (fn = modules[path] || modules[path = expand(path, './index')]) {
+              module = {id: path, exports: {}};
+              try {
+                cache[path] = module;
+                fn(module.exports, function(name) {
+                  return req(name, dirname(path));
+                }, module);
                 return module.exports;
-              } else if (fn = modules[path] || modules[path = expand(path, './index')]) {
-                module = {id: path, exports: {}};
-                try {
-                  cache[path] = module;
-                  fn(module.exports, function(name) {
-                    return require(name, dirname(path));
-                  }, module);
-                  return module.exports;
-                } catch (err) {
-                  delete cache[path];
-                  throw err;
-                }
-              } else {
-                throw 'module \\'' + name + '\\' not found';
+              } catch (err) {
+                delete cache[path];
+                throw err;
               }
-            }, expand = function(root, name) {
-              var results = [], parts, part;
-              if (/^\\.\\.?(\\/|$)/.test(name)) {
-                parts = [root, name].join('/').split('/');
-              } else {
-                parts = name.split('/');
-              }
-              for (var i = 0, length = parts.length; i < length; i++) {
-                part = parts[i];
-                if (part == '..') {
-                  results.pop();
-                } else if (part != '.' && part != '') {
-                  results.push(part);
-                }
-              }
-              return results.join('/');
-            }, dirname = function(path) {
-              return path.split('/').slice(0, -1).join('/');
-            };
-            this.#{@identifier} = function(name) {
-              return require(name, '');
+            } else {
+              throw 'module \\'' + name + '\\' not found';
             }
-            this.#{@identifier}.define = function(bundle) {
-              for (var key in bundle)
-                modules[key] = bundle[key];
-            };
-          }
-          return this.#{@identifier}.define;
+          }, expand = function(root, name) {
+            var results = [], parts, part;
+            if (/^\\.\\.?(\\/|$)/.test(name)) {
+              parts = [root, name].join('/').split('/');
+            } else {
+              parts = name.split('/');
+            }
+            for (var i = 0, length = parts.length; i < length; i++) {
+              part = parts[i];
+              if (part == '..') {
+                results.pop();
+              } else if (part != '.' && part != '') {
+                results.push(part);
+              }
+            }
+            return results.join('/');
+          }, dirname = function(path) {
+            return path.split('/').slice(0, -1).join('/');
+          };
+
+          return function(bundle) {
+            for (var key in bundle){
+              modules[key] = bundle[key];
+            }
+
+            //UMD
+            if (typeof define === 'function' && define.amd) {
+              // AMD. Register as a named module
+              define('#{@rootModuleName}',[],function(){
+                return req('#{@rootModuleName}','');
+              });
+            } else {
+              // Browser globals
+              this.#{@rootModuleName} = req('#{@rootModuleName}','');
+
+              //define global require
+              if (!this.#{@identifier}) {
+                this.#{@identifier} = function(name) {
+                  return req(name, '');
+                }
+              }
+            }
+          };
         }).call(this)({
       """
 
