@@ -110,7 +110,7 @@ exports.Package = class Package
             //UMD
             if (typeof define === 'function' && define.amd) {
               // AMD. Register as a named module
-              define('#{@rootModuleName}',[],function(){
+              define([],function(){
                 return req('#{@rootModuleName}','');
               });
             } else {
